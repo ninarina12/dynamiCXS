@@ -12,7 +12,7 @@ from utils import cm, props, format_axis
 
 
 class ODE(nn.Module):
-    '''Base class to define, solve, and visualize a system of ODEs.
+    r'''Base class to define, solve, and visualize a system of ODEs.
             
     Parameters
     ----------
@@ -22,9 +22,9 @@ class ODE(nn.Module):
     Attributes
     ----------
     seed : int
-        Seed used to set the state of a random number generator.
+        Default seed used to set the state of a random number generator. Default is 12.
     L : float
-        Length of the real-space simulation box.
+        Default length of the real-space simulation box. Default is 2.
     odeint : torchdiffeq.odeint
         Numerical integrator for a system of ODEs given an initial value.
         
@@ -39,8 +39,24 @@ class ODE(nn.Module):
         self.odeint = odeint
         
         
+    def _get_colors(self, y, ntype=None, vmin=1e2, vmax=1e5):
+        if ntype == 'mod':
+            norm = plt.Normalize(vmin=0., vmax=2*np.pi)
+            cmap = cm.romaO
+        elif ntype == 'log':
+            norm = mpl.colors.LogNorm(vmin=vmin, vmax=vmax)
+            cmap = cm.davos
+        elif ntype == 'unit':
+            norm = plt.Normalize(vmin=0, vmax=1)
+            cmap = cm.davos
+        else:
+            norm = plt.Normalize(vmin=y.min(), vmax=y.max())
+            cmap = cm.davos
+        return cmap, norm
+
+    
     def solve(self, t, t0=0):
-        '''Load a network from file.
+        r'''Solve the ODE system from `t[0]` to `t[-1]` and return the solution at times `t`.
         
         Parameters
         ----------
@@ -48,11 +64,14 @@ class ODE(nn.Module):
             1-dimensional tensor of evaluation times.
 
         t0 : int or float
-            Either an index (int) into t or a time point (float) at which to start (usually to eliminate initial transients).
+            Either the first index (int) into `t` or time point (float) at which to return the solution.
+            The initial state will be set to the solution at this point and initial time set to 0 at this point.
+            This is typically set greater than zero to exclude initial transients. Default is 0.
 
-        Returns
-        -------
-        
+        Attributes
+        ----------
+        y : torch.tensor of shape (T,M,1,N*N)
+            Solution evaluated at `T` time points for `M` initial states.
         '''
         
         device = self.y0.device
@@ -71,28 +90,12 @@ class ODE(nn.Module):
             self.t = t[:-t0]
         else:
             self.t = t
-        
-        
-    def get_colors(self, y, ntype=None, vmin=1e2, vmax=1e5):
-        if ntype == 'mod':
-            norm = plt.Normalize(vmin=0., vmax=2*np.pi)
-            cmap = cm.romaO
-        elif ntype == 'log':
-            norm = mpl.colors.LogNorm(vmin=vmin, vmax=vmax)
-            cmap = cm.davos
-        elif ntype == 'unit':
-            norm = plt.Normalize(vmin=0, vmax=1)
-            cmap = cm.davos
-        else:
-            norm = plt.Normalize(vmin=y.min(), vmax=y.max())
-            cmap = cm.davos
-        return cmap, norm
-
-    
+            
+            
     def plot_frame(self, ax, y, ntype=None, vmin=1e2, vmax=1e5, alpha=0.9, extent=None):
         if ntype == 'mod':
             y = np.mod(y, 2*np.pi)
-        cmap, norm = self.get_colors(y, ntype, vmin, vmax)
+        cmap, norm = self._get_colors(y, ntype, vmin, vmax)
         sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
         
         colors = cmap(norm(y))
@@ -110,7 +113,7 @@ class ODE(nn.Module):
     def plot_series(self, y, ntype=None, vmin=1e2, vmax=1e5, clabel=None):
         if ntype == 'mod':
             y = np.mod(y, 2*np.pi)
-        cmap, norm = self.get_colors(y, ntype, vmin, vmax)
+        cmap, norm = self._get_colors(y, ntype, vmin, vmax)
         sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
         
         n = 6
@@ -133,12 +136,15 @@ class ODE(nn.Module):
     
     
 class Kuramoto(ODE):
-    def __init__(self, N, v, K, method='dopri5', default_type=torch.float64):
+    def __init__(self, args, method='dopri5', default_type=torch.float64):
         super(Kuramoto, self).__init__(method)
         
-        self.N = N
-        self.v = v
-        self.K = K
+        default_args = {'N': 100,
+                        'v': 0.5,
+                        'K': 0.2
+                       }
+        for k, v in default_args.items():
+            setattr(self, k, args[k] if k in args else v)
         
         kernel = torch.tensor([[[[0,0,1,0,0],
                                  [0,1,1,1,0],
@@ -166,19 +172,22 @@ class Kuramoto(ODE):
     
     
 class GrayScott(ODE):
-    def __init__(self, N, Du, Dv, f, k, f0=None, k0=None, method='dopri5', default_type=torch.float64):
+    def __init__(self, args, method='dopri5', default_type=torch.float64):
         super(GrayScott, self).__init__(method)
         
-        self.N = N
-        self.Du = Du
-        self.Dv = Dv
-        self.f = f
-        self.k = k
-        self.f0 = f0
-        self.k0 = k0 
-        self.L = 2.
+        default_args = {'N': 100,
+                        'Du': 1e-5,
+                        'Dv': 5e-6,
+                        'f': 0.040,
+                        'k': 0.063,
+                        'f0': None,
+                        'k0': None
+                       }
+        for k, v in default_args.items():
+            setattr(self, k, args[k] if k in args else v)
         
-        h = self.L/N
+        self.L = 2.
+        h = self.L/self.N
         kernel = (1./h)**2*torch.tensor([[[[0,1,0],
                                            [1,-4,1],
                                            [0,1,0]]]], dtype=default_type)
