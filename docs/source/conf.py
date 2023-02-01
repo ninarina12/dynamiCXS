@@ -54,7 +54,7 @@ def setup(app):
 	import mock
 	
 	#MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'skimage.data', 'torchdiffeq', 'utils']
-	MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time']
+	MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot']
 	
 	sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
 
