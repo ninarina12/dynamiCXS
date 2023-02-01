@@ -51,11 +51,11 @@ sys.path.insert(0, os.path.abspath('./../..'))
 
 # to display docs when using imported packages
 def setup(app):
-	import mock
+	#import mock
 	from unittest.mock import MagicMock
 	
 	#MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'torch', 'torch.nn', 'nn', 'skimage.data', 'torchdiffeq']
-	MOCK_MODULES = ['torch']
+	MOCK_MODULES = ['torch', 'nn']
 	MOCK_CLASSES = ['nn.Module']
 
 	class Mock(MagicMock):
