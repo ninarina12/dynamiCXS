@@ -56,11 +56,13 @@ def setup(app):
 	#MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'torch', 'torch.nn', 'nn', 'skimage.data', 'torchdiffeq']
 	MOCK_MODULES = ['torch']
 
-	sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
+	for mod_name in MOCK_MODULES:
+    		sys.modules[mod_name] = mock.Mock()
+    		sys.modules[mod_name].__name__ = mod_name
 
 	from dynamicxs import ode
 	ode.ODE.__name__ = 'ODE'
-	ode.Kuramoto.__name__ = 'Kumamoto'
+	ode.Kuramoto.__name__ = 'Kuramoto'
 	ode.GrayScott.__name__ = 'GrayScott'
 	ode.LotkaVolterra.__name__ = 'LotkaVolterra'
 	sys.modules['ode'] = ode
