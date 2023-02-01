@@ -52,6 +52,7 @@ sys.path.insert(0, os.path.abspath('./../..'))
 # to display docs when using imported packages
 def setup(app):
 	import torch
+	import torch.nn as nn
 	import mock
 	
 	MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'skimage.data', 'torchdiffeq', 'utils']
