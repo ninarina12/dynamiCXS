@@ -58,7 +58,7 @@ def setup(app):
 	for mod_name in MOCK_MODULES:
 		sys.modules[mod_name] = mock.Mock()
 	
-	sys.modules['nn.Module'] = mock.Mock('nn.Module'=object)
+	sys.modules['nn.Module'] = mock.Mock(nn.Module=object)
 
 	from dynamicxs import ode
 	ode.ODE.__name__ = 'ODE'
