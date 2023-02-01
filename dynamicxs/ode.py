@@ -11,7 +11,7 @@ from torchdiffeq import odeint, odeint_adjoint
 from utils import cm, props, format_axis
 
 
-class ODE(nn.Module):
+class ODE:
     '''Base class to define, solve, and visualize a system of ODEs.
             
     Parameters
