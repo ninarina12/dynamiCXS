@@ -53,16 +53,16 @@ sys.path.insert(0, os.path.abspath('./../..'))
 def setup(app):
 	import mock
 
-	MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'torch', 'torch.nn', 'torch.nn.Module', 'nn.Module', 'skimage.data', 'torchdiffeq', 'utils']
+	MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'torch', 'torch.nn', 'nn', 'skimage.data', 'torchdiffeq', 'utils']
 
-	#sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
+	sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
 
-	#from dynamicxs import ode
-	#ode.ODE.__name__ = 'ODE'
-	#ode.Kuramoto.__name__ = 'Kumamoto'
-	#ode.GrayScott.__name__ = 'GrayScott'
-	#ode.LotkaVolterra.__name__ = 'LotkaVolterra'
-	#sys.modules['ode'] = ode
+	from dynamicxs import ode
+	ode.ODE.__name__ = 'ODE'
+	ode.Kuramoto.__name__ = 'Kumamoto'
+	ode.GrayScott.__name__ = 'GrayScott'
+	ode.LotkaVolterra.__name__ = 'LotkaVolterra'
+	sys.modules['ode'] = ode
 
 	app.connect('build-finished', build_finished)
 
