@@ -62,7 +62,7 @@ def setup(app):
 		def __getattr__(cls, name):
 			if name in MOCK_CLASSES:
 				return object
-			return MagicMock()
+			return mock.Mock()
 	
 	sys.modules.update((mod_name, MyMock()) for mod_name in MOCK_MODULES)
 	#for mod_name in MOCK_MODULES:
