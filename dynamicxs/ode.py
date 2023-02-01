@@ -8,7 +8,7 @@ import torch.nn as nn
 
 from skimage.data import binary_blobs
 from torchdiffeq import odeint, odeint_adjoint
-from utils import cm, props, format_axis
+#from utils import cm, props, format_axis
 
 
 class ODE(nn.Module):
