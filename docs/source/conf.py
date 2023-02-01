@@ -55,7 +55,8 @@ def setup(app):
 	import torch.nn as nn
 	import mock
 	
-	MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'skimage.data', 'torchdiffeq', 'utils']
+	#MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'skimage.data', 'torchdiffeq', 'utils']
+	MOCK_MODULES = []
 	
 	sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
 
