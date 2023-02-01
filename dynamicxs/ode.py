@@ -11,7 +11,7 @@ import torch
 #from utils import cm, props, format_axis
 
 
-class ODE:
+class ODE(nn.Module):
     '''Base class to define, solve, and visualize a system of ODEs.
             
     Parameters

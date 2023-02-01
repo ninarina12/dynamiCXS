@@ -52,13 +52,23 @@ sys.path.insert(0, os.path.abspath('./../..'))
 # to display docs when using imported packages
 def setup(app):
 	import mock
-
+	from unittest.mock import MagicMock
+	
 	#MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'torch', 'torch.nn', 'nn', 'skimage.data', 'torchdiffeq']
 	MOCK_MODULES = ['torch']
+	MOCK_CLASSES = ['nn.Module']
 
-	for mod_name in MOCK_MODULES:
-    		sys.modules[mod_name] = mock.Mock()
-    		sys.modules[mod_name].__name__ = mod_name
+	class Mock(MagicMock):
+		@classmethod
+    		def __getattr__(cls, name):
+        		if name in MOCK_CLASSES:
+            			return object
+        		return MagicMock()
+
+	sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+	#for mod_name in MOCK_MODULES:
+    	#	sys.modules[mod_name] = mock.Mock()
+    	#	sys.modules[mod_name].__name__ = mod_name
 
 	from dynamicxs import ode
 	ode.ODE.__name__ = 'ODE'
