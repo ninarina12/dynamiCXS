@@ -1,7 +1,7 @@
-#import numpy as np
-#import matplotlib as mpl
-#import matplotlib.pyplot as plt
-#import time
+import numpy as np
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import time
 
 import torch
 import torch.nn as nn
@@ -25,7 +25,7 @@ class ODE(nn.Module):
         Seed used to set the state of a random number generator.
     L : float
         Length of the real-space simulation box.
-    odeint : `torchdiffeq.odeint`
+    odeint : torchdiffeq.odeint
         Numerical integrator for a system of ODEs given an initial value.
         
     ''' 
@@ -44,7 +44,7 @@ class ODE(nn.Module):
         
         Parameters
         ----------
-        t : `torch.tensor`
+        t : torch.tensor
             1-dimensional tensor of evaluation times.
 
         t0 : int or float
