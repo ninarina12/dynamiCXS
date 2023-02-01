@@ -55,8 +55,8 @@ def setup(app):
 	from unittest.mock import MagicMock
 	
 	#MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'torch', 'torch.nn', 'nn', 'skimage.data', 'torchdiffeq']
-	MOCK_MODULES = ['torch', 'torch.nn', 'nn.Module']
-	MOCK_CLASSES = ['nn.Module']
+	MOCK_MODULES = ['torch', 'torch.nn']
+	MOCK_CLASSES = ['Module']
 
 	class Mock(MagicMock):
 		@classmethod

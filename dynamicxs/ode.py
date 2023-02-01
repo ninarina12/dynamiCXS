@@ -4,7 +4,7 @@
 #import time
 
 import torch
-#import torch.nn as nn
+import torch.nn as nn
 
 #from skimage.data import binary_blobs
 #from torchdiffeq import odeint, odeint_adjoint
