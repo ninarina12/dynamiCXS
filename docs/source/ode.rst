@@ -3,4 +3,3 @@ ODE Class
 
 .. autoclass:: dynamicxs.ode.ODE
     :members:
-    :show-inheritance:
