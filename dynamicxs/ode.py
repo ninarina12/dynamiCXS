@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-#import time
+import time
 
 import torch
 import torch.nn as nn
