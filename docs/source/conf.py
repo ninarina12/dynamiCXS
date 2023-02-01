@@ -53,10 +53,18 @@ sys.path.insert(0, os.path.abspath('./../..'))
 def setup(app):
 	import mock
 
+	try: import torch
+	except ModuleNotFoundError:
+    		from unittest.mock import MagicMock
+
+    		class Mock(MagicMock):
+       			@classmethod
+        		def __getattr__(cls, name):
+            			return MagicMock()
+
 	MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'torch', 'torch.nn', 'torch.nn.Module', 'nn.Module', 'skimage.data', 'torchdiffeq', 'utils']
 
-	for mod_name in MOCK_MODULES:
-		sys.modules[mod_name] = mock.Mock()
+	sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
 
 	from dynamicxs import ode
 	ode.ODE.__name__ = 'ODE'
