@@ -55,16 +55,9 @@ def setup(app):
 	
 	#MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'torch', 'torch.nn', 'nn', 'skimage.data', 'torchdiffeq']
 	MOCK_MODULES = ['torch', 'torch.nn']
-	MOCK_CLASSES = ['Module']
-
-	class MyMock(mock.Mock):
-		@classmethod
-		def __getattr__(cls, name):
-			if name in MOCK_CLASSES:
-				return object
-			return mock.Mock()
 	
-	sys.modules.update((mod_name, MyMock()) for mod_name in MOCK_MODULES)
+	sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
+
 	#for mod_name in MOCK_MODULES:
     	#	sys.modules[mod_name] = mock.Mock()
     	#	sys.modules[mod_name].__name__ = mod_name
