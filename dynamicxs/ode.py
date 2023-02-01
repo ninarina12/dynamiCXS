@@ -3,7 +3,7 @@
 #import matplotlib.pyplot as plt
 #import time
 
-#import torch
+import torch
 #import torch.nn as nn
 
 #from skimage.data import binary_blobs

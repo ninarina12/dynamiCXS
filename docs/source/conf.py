@@ -53,9 +53,10 @@ sys.path.insert(0, os.path.abspath('./../..'))
 def setup(app):
 	import mock
 
-	MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'torch', 'torch.nn', 'nn', 'skimage.data', 'torchdiffeq']
+	#MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'time', 'torch', 'torch.nn', 'nn', 'skimage.data', 'torchdiffeq']
+	MOCK_MODULES = ['torch']
 
-	#sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
+	sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
 
 	from dynamicxs import ode
 	ode.ODE.__name__ = 'ODE'
