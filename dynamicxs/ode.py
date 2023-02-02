@@ -88,7 +88,7 @@ class ODE(nn.Module):
         t : ``torch.tensor``
             1-dimensional tensor of evaluation times.
 
-        y0 : ``torch.tensor`` of shape ``(M, ..., D)``
+        y0 : ``torch.tensor`` of shape ``(M,...,D)``
             Initial state of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
             
         device : str
@@ -96,7 +96,7 @@ class ODE(nn.Module):
 
         Returns
         -------
-        y : ``torch.tensor`` of shape ``(T, M, ..., D)``
+        y : ``torch.tensor`` of shape ``(T,M,...,D)``
             Solution evaluated at ``T`` time points for ``M`` initial conditions. ``D`` denotes the flattened system size.
             
         """
@@ -301,7 +301,7 @@ class Kuramoto(ODE):
                 
         Attributes
         ----------
-        y0 : ``torch.tensor`` of shape ``(M, ..., D)``
+        y0 : ``torch.tensor`` of shape ``(M,...,D)``
             Initial state of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
                 
         """
@@ -318,12 +318,12 @@ class Kuramoto(ODE):
         t : ``torch.tensor``
             1-dimensional tensor of the evaluation time point.
         
-        y : ``torch.tensor`` of shape ``(M, ..., D)``
+        y : ``torch.tensor`` of shape ``(M,...,D)``
             State of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
                 
         Returns
         -------
-        dy/dt : ``torch.tensor`` of shape ``(M, ..., D)``
+        dy/dt : ``torch.tensor`` of shape ``(M,...,D)``
             Derivative of the system.
                 
         """
@@ -421,7 +421,7 @@ class GrayScott(ODE):
                 
         Attributes
         ----------
-        y0 : ``torch.tensor`` of shape ``(M, ..., D)``
+        y0 : ``torch.tensor`` of shape ``(M,...,D)``
             Initial state of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
                 
         """
@@ -457,12 +457,12 @@ class GrayScott(ODE):
         t : ``torch.tensor``
             1-dimensional tensor of the evaluation time point.
         
-        y : ``torch.tensor`` of shape ``(M, ..., D)``
+        y : ``torch.tensor`` of shape ``(M,...,D)``
             State of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
                 
         Returns
         -------
-        dy/dt : ``torch.tensor`` of shape ``(M, ..., D)``
+        dy/dt : ``torch.tensor`` of shape ``(M,...,D)``
             Derivative of the system.
                 
         """
@@ -500,12 +500,12 @@ class LotkaVolterra(ODE):
         t : ``torch.tensor``
             1-dimensional tensor of the evaluation time point.
         
-        y : ``torch.tensor`` of shape ``(M, ..., N, 2)``
+        y : ``torch.tensor`` of shape ``(M,...,N,2)``
             State of the system for ``M`` initial conditions.
                 
         Returns
         -------
-        dy/dt : ``torch.tensor`` of shape ``(M, ..., N, 2)``
+        dy/dt : ``torch.tensor`` of shape ``(M,...,N,2)``
             Derivative of the system.
                 
         """

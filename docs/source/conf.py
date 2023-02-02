@@ -45,6 +45,9 @@ add_module_names = False
 # -- Options for nbsphinx
 nbsphinx_execute = 'never'
 
+# -- Other
+myst_update_mathjax = False
+
 import os
 import sys
 #Location of Sphinx files
