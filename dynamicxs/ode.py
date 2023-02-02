@@ -42,11 +42,13 @@ class ODE(nn.Module):
         self.odeint = odeint_adjoint if self.adjoint else odeint
         
         
-    def _color(self, y, ntype=None, vmin=1e2, vmax=1e5):
+    def _color(self, y, ntype=None, vmin=None, vmax=None):
         if ntype == 'mod':
             norm = plt.Normalize(vmin=0., vmax=2*np.pi)
             cmap = cm.romaO
         elif ntype == 'log':
+            vmin = vmin if vmin else 1e2
+            vmax = vmax if vmax else 1e5
             norm = mpl.colors.LogNorm(vmin=vmin, vmax=vmax)
             cmap = cm.davos
         elif ntype == 'unit':
@@ -127,7 +129,7 @@ class ODE(nn.Module):
             self.y = self.y[t0:]
             
         
-    def plot_frame(self, ax, y, ntype=None, vmin=1e2, vmax=1e5, alpha=0.9, extent=None):
+    def plot_frame(self, ax, y, ntype=None, vmin=None, vmax=None, alpha=0.9, extent=None):
         r"""Plot a single frame of an ODE solution.
         
         Parameters
@@ -181,7 +183,7 @@ class ODE(nn.Module):
         ax.axis('off')
             
         
-    def plot_series(self, y, ntype=None, vmin=1e2, vmax=1e5, clabel=None):
+    def plot_series(self, y, ntype=None, vmin=None, vmax=None, clabel=None):
         r"""Plot a time series of frames of an ODE solution.
         
         Parameters
