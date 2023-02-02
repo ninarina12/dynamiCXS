@@ -24,7 +24,7 @@ extensions = [
 
 intersphinx_mapping = {
 	'python': ('https://docs.python.org/3/', None),
-	'pytorch": ("https://pytorch.org/docs/stable/', None),
+	'pytorch': ('https://pytorch.org/docs/stable/', None),
 	'sphinx': ('https://www.sphinx-doc.org/en/master/', None),
 }
 intersphinx_disabled_domains = ['std']
