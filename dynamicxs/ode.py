@@ -31,8 +31,7 @@ class ODE(nn.Module):
         Numerical integrator for a system of ODEs given an initial value.
         The adjoint method will not be used if ``requires_grad`` is ``False``.
         
-    """ 
-    
+    """  
     def __init__(self, method='dopri5', adjoint=False, requires_grad=True):      
         super(ODE, self).__init__()
         
@@ -102,7 +101,6 @@ class ODE(nn.Module):
             Solution evaluated at ``T`` time points for ``M`` initial conditions. ``D`` denotes the flattened system size.
             
         """
-        
         if self.requires_grad:
             if self.training:
                 return self._solve(t, y0, device)
@@ -122,7 +120,6 @@ class ODE(nn.Module):
             The initial state will be set to the solution at this point and initial time set to 0 at this point.
             
         """
-        
         if t0 > 0:
             self.t = self.t[:-t0]
             self.y0.data = self.y[t0]
@@ -143,21 +140,18 @@ class ODE(nn.Module):
         ntype : str
             Type of normalization to apply when displaying the image. The options are:
             
-            - ``mod`` : Linear normalization modulo :math:`2 \pi`
-            
-            - ``log`` : Logarithmic normalization scale
-            
-            - ``unit`` : Linear normalization between 0 and 1
-            
-            - ``None`` : Linear normalization between the minimum and maximum values of ``y``
+            - ``mod`` -- Linear normalization modulo :math:`2 \pi`
+            - ``log`` -- Logarithmic normalization scale
+            - ``unit`` -- Linear normalization between 0 and 1
+            - ``None`` -- Linear normalization between the min. and max. values of ``y``
             
             The default is ``None``.     
         
         vmin : float, optional
-            Minimum value of logarithmic scale when ``ntype`` is ``log``.    
+            Minimum normalization value when ``ntype`` is ``log``.    
         
         vmax : float, optional
-            Maximum value of logarithmic scale when ``ntype`` is ``log``.
+            Maximum normalization value when ``ntype`` is ``log``.
         
         alpha : float between 0 and 1, optional
             Opacity of the image.
@@ -165,7 +159,6 @@ class ODE(nn.Module):
         extent : list or tuple of floats (left, right, bottom, top), optional
             Coordinates of the bounding box of the image.
         """
-        
         if ntype == 'mod':
             y = np.mod(y, 2*np.pi)
         cmap, norm = self._color(y, ntype, vmin, vmax)
@@ -196,22 +189,22 @@ class ODE(nn.Module):
             Type of normalization to apply when displaying the image. The options are:
             
             - ``mod`` -- Linear normalization modulo :math:`2 \pi`
-            - ``log`` -- Logarithmic normalization scale 
+            - ``log`` -- Logarithmic normalization scale
             - ``unit`` -- Linear normalization between 0 and 1
-            - ``None`` -- Linear normalization between the minimum and maximum values of ``y``
+            - ``None`` -- Linear normalization between the min. and max. values of ``y``
             
             The default is ``None``.     
         
         vmin : float, optional
-            Minimum value of logarithmic scale when ``ntype`` is ``log``.    
+            Minimum normalization value when ``ntype`` is ``log``.    
         
         vmax : float, optional
-            Maximum value of logarithmic scale when ``ntype`` is ``log``.
+            Maximum normalization value when ``ntype`` is ``log``.
         
         clabel : str, optional
             Text used to label the colorbar.
+            
         """
-        
         if ntype == 'mod':
             y = np.mod(y, 2*np.pi)
         cmap, norm = self._color(y, ntype, vmin, vmax)
@@ -261,7 +254,6 @@ class Kuramoto(ODE):
         Convolution operator coupling neighboring oscillators.
 
     """
-    
     def __init__(self, args, method='dopri5', default_type=torch.float64):   
         super(Kuramoto, self).__init__(method, adjoint=False, requires_grad=False)
         
@@ -301,7 +293,6 @@ class Kuramoto(ODE):
             Initial state of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
                 
         """
-        
         torch.manual_seed(seed)
         self.y0 = nn.Parameter(2*np.pi*torch.rand(M, 1, self.N, self.N).flatten(start_dim=-2), requires_grad=False)
     
@@ -323,7 +314,6 @@ class Kuramoto(ODE):
             Derivative of the system.
                 
         """
-        
         y = y.view((-1, 1, self.N, self.N))
         cosy = torch.cos(y)
         siny = torch.sin(y)
@@ -349,12 +339,13 @@ class GrayScott(ODE):
     ----------
     args : dict
         Dictionary of parameters defining the ODE system:
+        
             - **N** (`int`) -- Dimension of the simulation box ``(N x N)``
             - **L** (`float`) -- Length of the real-space simulation box ``(L x L)`` 
             - **Du** (`float`) -- Diffusion constant of component U
             - **Dv** (`float`) -- Diffusion constant of component V
-            - **f** (`float`) -- Inflow rate of U (i.e. feed rate)
-            - **k** (`float`) -- Depletion rate of V (i.e. kill rate)
+            - **f** (`float`) -- Inflow rate of U (`i.e.` feed rate)
+            - **k** (`float`) -- Depletion rate of V (`i.e.` kill rate)
             - **f0** (`float`) -- Initial inflow rate of U
             - **k0** (`float`) -- Initial depletion rate of V
         
@@ -372,7 +363,6 @@ class GrayScott(ODE):
         Convolution operator used to compute the discrete Laplacian.
 
     """
-    
     def __init__(self, args, method='dopri5', default_type=torch.float64):
         super(GrayScott, self).__init__(method, adjoint=False, requires_grad=False)
         
@@ -414,7 +404,6 @@ class GrayScott(ODE):
             Initial state of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
                 
         """
-        
         torch.manual_seed(seed)
         u = torch.ones((M, 1, self.N, self.N))
         v = torch.zeros((M, 1, self.N, self.N))
@@ -508,6 +497,17 @@ class LotkaVolterra(ODE):
     
     
     def plot_frame(self, ax, y):
+        r"""Plot a single frame of an ODE solution.
+        
+        Parameters
+        ----------
+        ax : ``matplotlib.axes``
+            Axis object on which to display the solution. 
+        
+        y : ``torch.tensor`` of shape ``(N,2)``
+            Solution of the system to plot.
+        
+        """
         circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y]
         c = mpl.collections.PatchCollection(circles, lw=0, color='#527C9C')
         ax.add_collection(c)
@@ -519,6 +519,13 @@ class LotkaVolterra(ODE):
     
     
     def plot_series(self, y):
+        r"""Plot a time series of frames of an ODE solution.
+        
+        Parameters
+        ----------
+        y : ``torch.tensor`` of shape ``(T,...,N,2)``
+            Solution of the system to plot. ``T`` denotes the time points at which the system was evaluated.
+        """
         n = 6
         fig, ax = plt.subplots(1, n, figsize=(3*n,3), sharey=True)
         step = y.shape[0]//n
