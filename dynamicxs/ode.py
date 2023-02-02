@@ -343,10 +343,10 @@ class GrayScott(ODE):
     .. math::
         :nowrap:
 
-        \begin{gather*}
-        U + 2V & \rightarrow 3V \\
-        V & \rightarrow P
-        \end{gather*}
+        \begin{eqnarray*}
+        U + 2V & \rightarrow & 3V \\
+        V & \rightarrow & P
+        \end{eqnarray*}
 
     Parameters
     ----------
