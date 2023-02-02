@@ -230,7 +230,12 @@ class ODE(nn.Module):
     
     
 class Kuramoto(ODE):
-    r"""Class to define, initialize, solve, and visualize the Kuramoto model of coupled oscillators.
+    r"""Class to define, initialize, solve, and visualize the Kuramoto model of coupled oscillators:
+    
+    .. math::
+        :nowrap:
+
+        \frac{d\theta_i}{dt} = \omega + K\sum_{j\in N(i)}\sin(\theta_j-\theta_i)
 
     Parameters
     ----------
@@ -289,7 +294,7 @@ class Kuramoto(ODE):
                 
         Attributes
         ----------
-        y0 : ``torch.tensor`` of shape ``(M,...,D)``
+        y0 : ``torch.tensor`` of shape ``(M,1,D)``
             Initial state of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
                 
         """
@@ -305,12 +310,12 @@ class Kuramoto(ODE):
         t : ``torch.tensor``
             1-dimensional tensor of the evaluation time point.
         
-        y : ``torch.tensor`` of shape ``(M,...,D)``
+        y : ``torch.tensor`` of shape ``(M,1,D)``
             State of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
                 
         Returns
         -------
-        dy/dt : ``torch.tensor`` of shape ``(M,...,D)``
+        dy/dt : ``torch.tensor`` of shape ``(M,1,D)``
             Derivative of the system.
                 
         """
@@ -342,14 +347,15 @@ class GrayScott(ODE):
         
             - **N** (`int`) -- Dimension of the simulation box ``(N x N)``
             - **L** (`float`) -- Length of the real-space simulation box ``(L x L)`` 
-            - **Du** (`float`) -- Diffusion constant of component U
-            - **Dv** (`float`) -- Diffusion constant of component V
+            - **Du, Dv** (`float`) -- Diffusion constant of component U, V
             - **f** (`float`) -- Inflow rate of U (`i.e.` feed rate)
             - **k** (`float`) -- Depletion rate of V (`i.e.` kill rate)
             - **f0** (`float`) -- Initial inflow rate of U
             - **k0** (`float`) -- Initial depletion rate of V
         
-        Note that ``f0`` and ``k0`` are used only when the desired initial state is an equilibrium solution of a Gray-Scott system. In that case, the system will first be solved from a random initial state using ``f0`` and ``k0``, then solved from the final (equilibrium) state using ``f`` and ``k``.
+        Note that ``f0`` and ``k0`` are used only when the desired initial state is an equilibrium solution of a Gray-Scott
+        system. In that case, the system will first be solved from a random initial state using ``f0`` and ``k0``, then
+        solved from the final (equilibrium) state using ``f`` and ``k``.
 
     method : str
         Name of ODE solver to use. Default is ``dopri5``.
@@ -400,8 +406,9 @@ class GrayScott(ODE):
                 
         Attributes
         ----------
-        y0 : ``torch.tensor`` of shape ``(M,...,D)``
-            Initial state of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
+        y0 : ``torch.tensor`` of shape ``(M,2,D)``
+            Initial state of the system for ``M`` initial conditions and 2 concentrations (`u` and `v`).
+            ``D`` denotes the flattened system size.
                 
         """
         torch.manual_seed(seed)
@@ -435,12 +442,12 @@ class GrayScott(ODE):
         t : ``torch.tensor``
             1-dimensional tensor of the evaluation time point.
         
-        y : ``torch.tensor`` of shape ``(M,...,D)``
+        y : ``torch.tensor`` of shape ``(M,2,D)``
             State of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
                 
         Returns
         -------
-        dy/dt : ``torch.tensor`` of shape ``(M,...,D)``
+        dy/dt : ``torch.tensor`` of shape ``(M,2,D)``
             Derivative of the system.
                 
         """
@@ -453,19 +460,65 @@ class GrayScott(ODE):
     
     
 class LotkaVolterra(ODE):
-    def __init__(self, N, R, alpha, beta, gamma, delta, method='dopri5', adjoint=False, default_type=torch.float64):
-        super(LotkaVolterra, self).__init__(method, adjoint, requires_grad=False)
+    r"""Class to define, initialize, solve, and visualize a point cloud evolving according to the Lotka-Volterra model:
+    
+    .. math::
+        :nowrap:
+
+        \begin{eqnarray*}
+        \frac{dx}{dt} & = & \alpha x - \beta xy \\
+        \frac{dy}{dt} & = & \delta xy - \gamma y
+        \end{eqnarray*}
+
+    Parameters
+    ----------
+    args : dict
+        Dictionary of parameters defining the ODE system:
         
-        self.N = N
-        self.R = R
-        self.alpha = alpha
-        self.beta = beta
-        self.gamma = gamma
-        self.delta = delta
-        self.L = 2.
+            - **N** (`int`) -- Dimension of the simulation box ``(N x N)``
+            - **L** (`float`) -- Length of the real-space simulation box ``(L x L)``
+            - **R** (`float`) -- Radius of particles
+            - **alpha, beta, gamma, delta** (`float`) -- Interaction parameters
+
+    method : str
+        Name of ODE solver to use. Default is ``dopri5``.
+        
+    default_type: type
+        Set the default ``torch.Tensor`` type.
+
+    """
+    def __init__(self, args, method='dopri5', default_type=torch.float64):
+        super(LotkaVolterra, self).__init__(method, adjoint=False, requires_grad=False)
+        
+        default_args = {'N': 100,
+                        'L': 2.,
+                        'R': 0.05,
+                        'alpha': 1./3.,
+                        'beta': 2./3.,
+                        'gamma': 0.5,
+                        'delta': 0.5
+                       }
+        for k, v in default_args.items():
+            setattr(self, k, args[k] if k in args else v)
         
     
     def init_state(self, M=1, seed=12):
+        r"""Randomly generate the initial state(s) of the ODE system.
+            
+        Parameters
+        ----------
+        M : int
+            Number of initial conditions to generate. Default is 1.
+        
+        seed : int, optional
+            Default seed used to set the state of a random number generator. Default is 12.
+                
+        Attributes
+        ----------
+        y0 : ``torch.tensor`` of shape ``(M,N,2)``
+            Initial state of the system for ``M`` initial conditions.
+                
+        """
         torch.manual_seed(seed)
         self.y0 = self.L*torch.rand((M, self.N, 2)) - self.L/2.
         
@@ -478,12 +531,12 @@ class LotkaVolterra(ODE):
         t : ``torch.tensor``
             1-dimensional tensor of the evaluation time point.
         
-        y : ``torch.tensor`` of shape ``(M,...,N,2)``
+        y : ``torch.tensor`` of shape ``(M,N,2)``
             State of the system for ``M`` initial conditions.
                 
         Returns
         -------
-        dy/dt : ``torch.tensor`` of shape ``(M,...,N,2)``
+        dy/dt : ``torch.tensor`` of shape ``(M,N,2)``
             Derivative of the system.
                 
         """
@@ -523,7 +576,7 @@ class LotkaVolterra(ODE):
         
         Parameters
         ----------
-        y : ``torch.tensor`` of shape ``(T,...,N,2)``
+        y : ``torch.tensor`` of shape ``(T,N,2)``
             Solution of the system to plot. ``T`` denotes the time points at which the system was evaluated.
         """
         n = 6
