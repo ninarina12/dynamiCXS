@@ -16,18 +16,20 @@ class ODE(nn.Module):
             
     Parameters
     ----------
-    method : str, optional
-        Name of ODE solver to use. Default is `dopri5`.
-    adjoint : bool, optional
+    method : str
+        Name of ODE solver to use. Default is ``dopri5``.
+    
+    adjoint : bool
         Whether or not to use the adjoint method for backpropagating through ODE solutions. Default is False.
-    requires_grad: bool, optional
+    
+    requires_grad: bool
         Whether or not gradients should be computed for the tensors defining the ODE system.
 
     Attributes
     ----------
     odeint : torchdiffeq.odeint or torchdiffeq.odeint_adjoint
         Numerical integrator for a system of ODEs given an initial value.
-        The adjoint method will not be used if `requires_grad` is `False`.
+        The adjoint method will not be used if ``requires_grad`` is `False`.
         
     ''' 
     
@@ -79,7 +81,7 @@ class ODE(nn.Module):
         
         
     def solve(self, t, y0=None, device='cpu'):
-        r'''Numerically integrate the ODE system and return the solution at times `t`.
+        r'''Numerically integrate the ODE system and return the solution at times ``t``.
         
         Parameters
         ----------
@@ -87,15 +89,15 @@ class ODE(nn.Module):
             1-dimensional tensor of evaluation times.
 
         y0 : torch.tensor of shape (M, ..., D)
-            Initial state of the system for `M` initial conditions. `D` denotes the unrolled system size.
+            Initial state of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
             
         device : str
-            The name of the device on which the computation will be performed (e.g. `cpu` or `cuda`).
+            The name of the device on which the computation will be performed (e.g. ``cpu`` or ``cuda``).
 
         Returns
         -------
         y : torch.tensor of shape (T, M, ..., D)
-            Solution evaluated at `T` time points for `M` initial conditions. `D` denotes the unrolled system size.
+            Solution evaluated at ``T`` time points for ``M`` initial conditions. ``D`` denotes the flattened system size.
             
         '''
         
@@ -114,7 +116,7 @@ class ODE(nn.Module):
         Parameters
         ----------
         t0 : int
-            The first index into `t` at which to return the solution in order to exclude initial transients.
+            The first index into ``t`` at which to return the solution in order to exclude initial transients.
             The initial state will be set to the solution at this point and initial time set to 0 at this point.
             
         '''
@@ -126,6 +128,37 @@ class ODE(nn.Module):
             
         
     def plot_frame(self, ax, y, ntype=None, vmin=1e2, vmax=1e5, alpha=0.9, extent=None):
+        r'''Plot a single frame of an ODE solution.
+        
+        Parameters
+        ----------
+        ax : matplotlib.axes
+            Axis object on which to display the solution. 
+        
+        y : torch.tensor of shape (N,N)
+            Solution of the system to plot. The input should be reshaped to the dimensions of the simulation box.
+        
+        ntype : str
+            Type of normalization to apply when displaying the image. The options are:
+            - 'mod' : Linear normalization modulo 2:math:\pi
+            - 'log' : Logarithmic normalization scale
+            - 'unit' : Linear normalization between 0 and 1
+            - 'None' : Linear normalization between the minimum and maximum values of ``y``
+            The default is ``None``.     
+        
+        vmin : float, optional
+            Minimum value of logarithmic scale when ``ntype`` is ``log``.    
+        
+        vmax : float, optional
+            Maximum value of logarithmic scale when ``ntype`` is ``log``.
+        
+        alpha : float between 0 and 1, optional
+            Opacity of the image.
+        
+        extent : list or tuple of floats (left, right, bottom, top), optional
+            Coordinates of the bounding box of the image.
+        '''
+        
         if ntype == 'mod':
             y = np.mod(y, 2*np.pi)
         cmap, norm = self._color(y, ntype, vmin, vmax)
@@ -144,6 +177,32 @@ class ODE(nn.Module):
             
         
     def plot_series(self, y, ntype=None, vmin=1e2, vmax=1e5, clabel=None):
+        r'''Plot a time series of frames of an ODE solution.
+        
+        Parameters
+        ----------
+        y : torch.tensor of shape (T,N,N)
+            Solution of the system to plot. ``T`` denotes the time points at which the system was evaluated.
+            The input should be reshaped so that the last two dimensions match the dimensions of the simulation box.
+        
+        ntype : str
+            Type of normalization to apply when displaying the image. The options are:
+            - 'mod' : Linear normalization modulo 2\pi
+            - 'log' : Logarithmic normalization scale
+            - 'unit' : Linear normalization between 0 and 1
+            - 'None' : Linear normalization between the minimum and maximum values of ``y``
+            The default is ``None``.     
+        
+        vmin : float, optional
+            Minimum value of logarithmic scale when ``ntype`` is ``log``.    
+        
+        vmax : float, optional
+            Maximum value of logarithmic scale when ``ntype`` is ``log``.
+        
+        clabel : str, optional
+            Text used to label the colorbar.
+        '''
+        
         if ntype == 'mod':
             y = np.mod(y, 2*np.pi)
         cmap, norm = self._color(y, ntype, vmin, vmax)
@@ -169,35 +228,42 @@ class ODE(nn.Module):
     
     
 class Kuramoto(ODE):
-    r'''Class to define, initialize, solve, and visualize the Kuramoto model.
+    r'''Class to define, initialize, solve, and visualize the Kuramoto model of coupled oscillators.
 
     Parameters
     ----------
     args : dict
+        Dictionary of parameters defining the ODE system:
+        - N (int) - Dimension of the simulation box (``N x N``)
+        - L (float) - Length of the real-space simulation box (``L x L``)
+        - v (float) - Intrinsic frequency of the oscillators
+        - K (float) - Coupling strength
 
-    method : str, optional
-        Name of ODE solver to use. Default is `dopri5`.
+    method : str
+        Name of ODE solver to use. Default is ``dopri5``.
+        
+    default_type: type
+        Set the default ``torch.Tensor`` type.
 
     Attributes
     ----------
-    L : float
-        Default length of the real-space simulation box. Default is 2.
-    odeint : torchdiffeq.odeint or torchdiffeq.odeint_adjoint
-        Numerical integrator for a system of ODEs given an initial value.
+    conv : torch.nn.Conv2d
+        Convolution operator coupling neighboring oscillators.
 
     '''
     
-    def __init__(self, args, method='dopri5', adjoint=False, default_type=torch.float64):   
-        super(Kuramoto, self).__init__(method, adjoint, requires_grad=False)
+    def __init__(self, args, method='dopri5', default_type=torch.float64):   
+        super(Kuramoto, self).__init__(method, adjoint=False, requires_grad=False)
         
         default_args = {'N': 100,
+                        'L': 2.,
                         'v': 0.5,
                         'K': 0.2
                        }
+        
         for k, v in default_args.items():
             setattr(self, k, args[k] if k in args else v)
         
-        self.L = 2.
         kernel = torch.tensor([[[[0,0,1,0,0],
                                  [0,1,1,1,0],
                                  [1,1,0,1,1],
@@ -211,12 +277,18 @@ class Kuramoto(ODE):
     def init_state(self, M=1, seed=12):
         r'''Randomly generate the initial state(s) of the ODE system.
             
-            Parameters
-            ----------
-            M : int
-                Number of initial conditions to generate. Default is 1.
-            seed : int
-                Default seed used to set the state of a random number generator. Default is 12.
+        Parameters
+        ----------
+        M : int
+            Number of initial conditions to generate. Default is 1.
+        
+        seed : int, optional
+            Default seed used to set the state of a random number generator. Default is 12.
+                
+        Attributes
+        ----------
+        y0 : torch.tensor of shape (M, ..., D)
+            Initial state of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
                 
         '''
         
@@ -225,6 +297,23 @@ class Kuramoto(ODE):
     
     
     def forward(self, t, y):
+        r'''Evaluate the ODE system at a specified time ``t`` and state ``y``.
+            
+        Parameters
+        ----------
+        t : torch.tensor
+            1-dimensional tensor of the evaluation time point.
+        
+        y : torch.tensor of shape (M, ..., D)
+            State of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
+                
+        Returns
+        -------
+        dy/dt : torch.tensor of shape (M, ..., D)
+            Derivative of the system.
+                
+        '''
+        
         y = y.view((-1, 1, self.N, self.N))
         cosy = torch.cos(y)
         siny = torch.sin(y)
@@ -235,21 +324,58 @@ class Kuramoto(ODE):
     
     
 class GrayScott(ODE):
-    def __init__(self, args, method='dopri5', adjoint=False, default_type=torch.float64):
-        super(GrayScott, self).__init__(method, adjoint, requires_grad=False)
+    r'''Class to define, initialize, solve, and visualize the Gray-Scott model of a reaction diffusion system.
+    The system consists of components U and V with concentrations `u` and `v`, respectively, which react according to:
+    .. math::
+        :nowrap:
+
+        \begin{gather*}
+        U + 2V & \rightarrow 3V \\
+        V & \rightarrow P
+        \end{gather*}
+
+    Parameters
+    ----------
+    args : dict
+        Dictionary of parameters defining the ODE system:
+        - N (int) - Dimension of the simulation box (``N x N``)
+        - L (float) - Length of the real-space simulation box (``L x L``)
+        - Du (float) - Diffusion constant of component U
+        - Dv (float) - Diffusion constant of component V
+        - f (float) - Inflow rate of U (i.e. feed rate)
+        - k (float) - Depletion rate of V (i.e. kill rate)
+        - f0 (float) - Initial inflow rate of U
+        - k0 (float) - Initial depletion rate of V
+        Note that ``f0`` and ``k0`` are used only when the desired initial state is an equilibrium solution of a Gray-Scott system. In that case, the system will first be solved from a random initial state using ``f0`` and ``k0``, then solved from the final (equilibrium) state using ``f`` and ``k``.
+
+    method : str
+        Name of ODE solver to use. Default is ``dopri5``.
+        
+    default_type: type
+        Set the default ``torch.Tensor`` type.
+
+    Attributes
+    ----------
+    conv : torch.nn.Conv2d
+        Convolution operator used to compute the discrete Laplacian.
+
+    '''
+    
+    def __init__(self, args, method='dopri5', default_type=torch.float64):
+        super(GrayScott, self).__init__(method, adjoint=False, requires_grad=False)
         
         default_args = {'N': 100,
+                        'L': 2.,
                         'Du': 1e-5,
                         'Dv': 5e-6,
                         'f': 0.040,
-                        'k': 0.063,
+                        'k': 0.060,
                         'f0': None,
                         'k0': None
                        }
         for k, v in default_args.items():
             setattr(self, k, args[k] if k in args else v)
         
-        self.L = 2.
         h = self.L/self.N
         kernel = (1./h)**2*torch.tensor([[[[0,1,0],
                                            [1,-4,1],
@@ -260,6 +386,23 @@ class GrayScott(ODE):
         
     
     def init_state(self, M=1, seed=12):
+        r'''Randomly generate the initial state(s) of the ODE system.
+            
+        Parameters
+        ----------
+        M : int
+            Number of initial conditions to generate. Default is 1.
+        
+        seed : int, optional
+            Default seed used to set the state of a random number generator. Default is 12.
+                
+        Attributes
+        ----------
+        y0 : torch.tensor of shape (M, ..., D)
+            Initial state of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
+                
+        '''
+        
         torch.manual_seed(seed)
         u = torch.ones((M, 1, self.N, self.N))
         v = torch.zeros((M, 1, self.N, self.N))
@@ -284,6 +427,22 @@ class GrayScott(ODE):
         
         
     def forward(self, t, y):
+        r'''Evaluate the ODE system at a specified time ``t`` and state ``y``.
+            
+        Parameters
+        ----------
+        t : torch.tensor
+            1-dimensional tensor of the evaluation time point.
+        
+        y : torch.tensor of shape (M, ..., D)
+            State of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
+                
+        Returns
+        -------
+        dy/dt : torch.tensor of shape (M, ..., D)
+            Derivative of the system.
+                
+        '''
         y = y.view((-1, 2, self.N, self.N))
         u, v = y.split([1,1], dim=1)
         du = self.Du*self.conv(u) - u*v*v + self.f*(1 - u)
@@ -311,6 +470,22 @@ class LotkaVolterra(ODE):
         
         
     def forward(self, t, y):
+        r'''Evaluate the ODE system at a specified time ``t`` and state ``y``.
+            
+        Parameters
+        ----------
+        t : torch.tensor
+            1-dimensional tensor of the evaluation time point.
+        
+        y : torch.tensor of shape (M, ..., N, 2)
+            State of the system for ``M`` initial conditions.
+                
+        Returns
+        -------
+        dy/dt : torch.tensor of shape (M, ..., N, 2)
+            Derivative of the system.
+                
+        '''
         x0 = y[...,[0]].mean(dim=-2, keepdims=True) + 1.
         y0 = y[...,[1]].mean(dim=-2, keepdims=True) + 1.
         dx = self.alpha*x0 - self.beta*x0*y0
