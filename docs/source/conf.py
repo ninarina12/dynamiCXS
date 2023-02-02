@@ -17,7 +17,7 @@ extensions = [
 	'sphinx.ext.autodoc',
 	'sphinx.ext.autosummary',
 	'sphinx.ext.intersphinx',
-	'sphinx.ext.mathjax',
+	'sphinx.ext.imgmath',
 	'sphinx.ext.napoleon',
 	'nbsphinx',
 ]
@@ -30,8 +30,6 @@ intersphinx_mapping = {
 intersphinx_disabled_domains = ['std']
 
 templates_path = ['_templates']
-
-mathjax_path = 'https://cdn.jsdelivr.net/npm/mathjax@3/MathJax.js?config=TeX-AMS-MML_HTMLorMML'
 
 # -- Options for HTML output
 html_theme = 'sphinx_rtd_theme'
