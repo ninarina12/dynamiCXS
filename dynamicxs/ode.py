@@ -234,8 +234,10 @@ class Kuramoto(ODE):
     
     .. math::
         :nowrap:
-
+        
+        \begin{eqnarray*}
         \frac{d\theta_i}{dt} = \omega + K\sum_{j\in N(i)}\sin(\theta_j-\theta_i)
+        \end{eqnarray*}
 
     Parameters
     ----------
