@@ -336,6 +336,7 @@ class Kuramoto(ODE):
 class GrayScott(ODE):
     r"""Class to define, initialize, solve, and visualize the Gray-Scott model of a reaction diffusion system.
     The system consists of components U and V with concentrations `u` and `v`, respectively, which react according to:
+    
     .. math::
         :nowrap:
 
