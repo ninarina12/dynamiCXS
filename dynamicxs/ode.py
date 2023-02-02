@@ -143,7 +143,7 @@ class ODE(nn.Module):
         ntype : str
             Type of normalization to apply when displaying the image. The options are:
             
-            - ``mod`` : Linear normalization modulo 2:math:`\pi`
+            - ``mod`` : Linear normalization modulo :math:`2 \pi`
             
             - ``log`` : Logarithmic normalization scale
             
@@ -195,13 +195,10 @@ class ODE(nn.Module):
         ntype : str
             Type of normalization to apply when displaying the image. The options are:
             
-            - ``mod`` : Linear normalization modulo 2:math:`\pi`
-            
-            - ``log`` : Logarithmic normalization scale
-            
-            - ``unit`` : Linear normalization between 0 and 1
-            
-            - ``None`` : Linear normalization between the minimum and maximum values of ``y``
+            - ``mod`` -- Linear normalization modulo :math:`2 \pi`
+            - ``log`` -- Logarithmic normalization scale 
+            - ``unit`` -- Linear normalization between 0 and 1
+            - ``None`` -- Linear normalization between the minimum and maximum values of ``y``
             
             The default is ``None``.     
         
@@ -247,13 +244,10 @@ class Kuramoto(ODE):
     args : dict
         Dictionary of parameters defining the ODE system:
         
-        - N (int) - Dimension of the simulation box (``N x N``)
-        
-        - L (float) - Length of the real-space simulation box (``L x L``)
-        
-        - v (float) - Intrinsic frequency of the oscillators
-        
-        - K (float) - Coupling strength
+        - **N** (`int`) -- Dimension of the simulation box (``N x N``)
+        - **L** (`float`) -- Length of the real-space simulation box (``L x L``)
+        - **v** (`float`) -- Intrinsic frequency of the oscillators
+        - **K** (`float`) -- Coupling strength
 
     method : str
         Name of ODE solver to use. Default is ``dopri5``.
@@ -354,14 +348,14 @@ class GrayScott(ODE):
     ----------
     args : dict
         Dictionary of parameters defining the ODE system:
-        #. N (int) - Dimension of the simulation box (``N x N``)
-        #. L (float) - Length of the real-space simulation box (``L x L``) 
-        #. Du (float) - Diffusion constant of component U
-        #. Dv (float) - Diffusion constant of component V
-        #. f (float) - Inflow rate of U (i.e. feed rate)
-        #. k (float) - Depletion rate of V (i.e. kill rate)
-        #. f0 (float) - Initial inflow rate of U
-        #. k0 (float) - Initial depletion rate of V
+        - **N** (`int`) -- Dimension of the simulation box (``N x N``)
+        - **L** (`float`) -- Length of the real-space simulation box (``L x L``) 
+        - **Du** (`float`) -- Diffusion constant of component U
+        - **Dv** (`float`) -- Diffusion constant of component V
+        - **f** (`float`) -- Inflow rate of U (i.e. feed rate)
+        - **k** (`float`) -- Depletion rate of V (i.e. kill rate)
+        - **f0** (`float`) -- Initial inflow rate of U
+        - **k0** (`float`) -- Initial depletion rate of V
         
         Note that ``f0`` and ``k0`` are used only when the desired initial state is an equilibrium solution of a Gray-Scott system. In that case, the system will first be solved from a random initial state using ``f0`` and ``k0``, then solved from the final (equilibrium) state using ``f`` and ``k``.
 
