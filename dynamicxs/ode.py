@@ -80,7 +80,7 @@ class ODE(nn.Module):
             tf = time.time()
             print('Elapsed time: {:.2f} s'.format(tf - ti))
         
-        
+    
     def solve(self, t, y0=None, device='cpu'):
         r"""Numerically integrate the ODE system and return the solution at times ``t``.
         
@@ -125,7 +125,48 @@ class ODE(nn.Module):
             self.y0.data = self.y[t0]
             self.y = self.y[t0:]
             
+    
+    def get_batch(self, batch_time, batch_size):
+        r"""Sample a batch of ``t``, ``y0``, and ``y``.
         
+        Parameters
+        ----------
+        batch_time : int
+            Number of time points per batch.
+
+        batch_size : int
+            Number of initial conditions per batch.
+
+        Returns
+        -------
+        t : ``torch.tensor`` of shape ``(batch_time)``
+            Tensor of ``batch_time`` time points.
+            
+        y0 : ``torch.tensor`` of shape ``(batch_size,...,D)``
+            Initial states for ``batch_size`` initial conditions.
+            
+        y : ``torch.tensor`` of shape ``(batch_time,batch_size,...,D)``
+            Solution evaluated at ``batch_time`` time points for ``batch_size`` initial conditions.
+            
+        """
+        T, M, _, D = self.y.shape
+        batch_t = self.t[:batch_time]
+
+        c = [[i,j] for i in range(T - batch_time) for j in range(M)]
+        b = [c[i] for i in np.random.choice(len(c), batch_size, replace=False)]
+
+        for i in range(len(b)):
+            if i==0:
+                batch_y0 = self.y[b[i][0], b[i][1]][None,:]
+                batch_y = torch.stack([self.y[b[i][0]+j, b[i][1]] for j in range(batch_time)], dim=0)[:,None,:]
+            else:
+                batch_y0 = torch.cat((batch_y0, self.y[b[i][0], b[i][1]][None,:]))
+                batch_y = torch.cat(
+                    (batch_y, torch.stack([self.y[b[i][0]+j, b[i][1]] for j in range(batch_time)], dim=0)[:,None,:]),
+                    axis=1)
+        return batch_t, batch_y0, batch_y
+
+
     def plot_frame(self, ax, y, ntype=None, vmin=None, vmax=None, alpha=0.9, extent=None):
         r"""Plot a single frame of an ODE solution.
         
@@ -158,6 +199,12 @@ class ODE(nn.Module):
         
         extent : list or tuple of floats (left, right, bottom, top), optional
             Coordinates of the bounding box of the image.
+            
+        Returns
+        -------
+        sm : ``matplotlib.cm.ScalarMappable``
+            Object mapping scalar data to RGBA color values.
+            
         """
         if ntype == 'mod':
             y = np.mod(y, 2*np.pi)
@@ -168,12 +215,17 @@ class ODE(nn.Module):
         colors[...,-1] = alpha
         
         try: len(extent)
-        except: ax.imshow(colors, extent=(-self.L/2., self.L/2., -self.L/2., self.L/2.), origin='lower') 
-        else: ax.imshow(colors, extent=extent, origin='lower')
-            
-        ax.set_xlim(-self.L/2., self.L/2.)
-        ax.set_ylim(-self.L/2., self.L/2.)
+        except:
+            ax.imshow(colors, extent=(-self.L/2., self.L/2., -self.L/2., self.L/2.), origin='lower')
+            ax.set_xlim(-self.L/2., self.L/2.)
+            ax.set_ylim(-self.L/2., self.L/2.)
+        else:
+            ax.imshow(colors, extent=extent, origin='lower')
+            ax.set_xlim(extent[0], extent[1])
+            ax.set_ylim(extent[2], extent[3])      
+        
         ax.axis('off')
+        return sm
             
         
     def plot_series(self, y, ntype=None, vmin=None, vmax=None, clabel=None):
@@ -580,6 +632,7 @@ class LotkaVolterra(ODE):
         ----------
         y : ``torch.tensor`` of shape ``(T,N,2)``
             Solution of the system to plot. ``T`` denotes the time points at which the system was evaluated.
+            
         """
         n = 6
         fig, ax = plt.subplots(1, n, figsize=(3*n,3), sharey=True)
