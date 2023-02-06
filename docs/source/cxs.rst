@@ -1,4 +1,4 @@
-ODE Class
+CXS Class
 =============
 
 .. autoclass:: dynamicxs.cxs.CXS
