@@ -59,12 +59,17 @@ def setup(app):
 	
 	sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
 
-	from dynamicxs import ode
+	from dynamicxs import ode, cxs
 	ode.ODE.__name__ = 'ODE'
 	ode.Kuramoto.__name__ = 'Kuramoto'
 	ode.GrayScott.__name__ = 'GrayScott'
 	ode.LotkaVolterra.__name__ = 'LotkaVolterra'
 	sys.modules['ode'] = ode
+
+	cxs.CXS.__name__ = 'CXS'
+	cxs.CXSGrid.__name__ = 'CXSGrid'
+	cxs.CXSPoint.__name__ = 'CXSPoint'
+	sys.modules['cxs'] = cxs
 
 	app.connect('build-finished', build_finished)
 

@@ -4,4 +4,5 @@ Documentation
 .. toctree::
    :maxdepth: 2
 
-   ode   
+   ode
+   cxs 

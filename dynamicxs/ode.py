@@ -576,6 +576,65 @@ class LotkaVolterra(ODE):
         torch.manual_seed(seed)
         self.y0 = self.L*torch.rand((M, self.N, 2)) - self.L/2.
         
+    
+    def plot_frame(self, ax, y, ntype=None, vmin=None, vmax=None, alpha=0.9, extent=None):
+        r"""Plot a single frame of an ODE solution.
+        
+        Parameters
+        ----------
+        ax : ``matplotlib.axes``
+            Axis object on which to display the solution. 
+        
+        y : ``torch.tensor`` of shape ``(N,2)``
+            Solution of the system to plot.
+        
+        """
+        if ntype:
+            return super().plot_frame(ax, y, ntype, vmin, vmax, alpha, extent)
+        else:
+            circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y]
+            c = mpl.collections.PatchCollection(circles, lw=0, color='#527C9C')
+            ax.add_collection(c)
+
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_xlim([-self.L, self.L])
+            ax.set_ylim([-self.L, self.L])
+            
+    
+    def plot_series(self, y, ntype=None, vmin=None, vmax=None, clabel=None):
+        r"""Plot a time series of frames of an ODE solution.
+        
+        Parameters
+        ----------
+        y : ``torch.tensor`` of shape ``(T,N,2)``
+            Solution of the system to plot. ``T`` denotes the time points at which the system was evaluated.
+            
+        """
+        if ntype:
+            return super().plot_series(y, ntype, vmin, vmax, clabel)
+        else:
+            n = 6
+            fig, ax = plt.subplots(1, n, figsize=(3*n,3), sharey=True)
+            step = y.shape[0]//n
+            for i in range(n):
+                circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y[0]]
+                c = mpl.collections.PatchCollection(circles, lw=0, color='#D0D0D0', )
+                ax[i].add_collection(c)
+
+                circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y[i*step]]
+                c = mpl.collections.PatchCollection(circles, lw=0, color='#527C9C')
+                ax[i].add_collection(c)
+
+                ax[i].set_xticks([])
+                ax[i].set_yticks([])
+                ax[i].set_xlim([-self.L, self.L])
+                ax[i].set_ylim([-self.L, self.L])
+
+            fig.tight_layout()
+            fig.subplots_adjust(wspace=0.1)
+            return fig
+        
         
     def forward(self, t, y):
         r"""Evaluate the ODE system at a specified time ``t`` and state ``y``.
@@ -601,56 +660,3 @@ class LotkaVolterra(ODE):
         dx = torch.tile(dx, (1,self.N,1))
         dy = torch.tile(dy, (1,self.N,1))
         return torch.cat([dx, dy], dim=-1)
-    
-    
-    def plot_frame(self, ax, y):
-        r"""Plot a single frame of an ODE solution.
-        
-        Parameters
-        ----------
-        ax : ``matplotlib.axes``
-            Axis object on which to display the solution. 
-        
-        y : ``torch.tensor`` of shape ``(N,2)``
-            Solution of the system to plot.
-        
-        """
-        circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y]
-        c = mpl.collections.PatchCollection(circles, lw=0, color='#527C9C')
-        ax.add_collection(c)
-
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_xlim([-self.L, self.L])
-        ax.set_ylim([-self.L, self.L])
-    
-    
-    def plot_series(self, y):
-        r"""Plot a time series of frames of an ODE solution.
-        
-        Parameters
-        ----------
-        y : ``torch.tensor`` of shape ``(T,N,2)``
-            Solution of the system to plot. ``T`` denotes the time points at which the system was evaluated.
-            
-        """
-        n = 6
-        fig, ax = plt.subplots(1, n, figsize=(3*n,3), sharey=True)
-        step = y.shape[0]//n
-        for i in range(n):
-            circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y[0]]
-            c = mpl.collections.PatchCollection(circles, lw=0, color='#D0D0D0', )
-            ax[i].add_collection(c)
-
-            circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y[i*step]]
-            c = mpl.collections.PatchCollection(circles, lw=0, color='#527C9C')
-            ax[i].add_collection(c)
-
-            ax[i].set_xticks([])
-            ax[i].set_yticks([])
-            ax[i].set_xlim([-self.L, self.L])
-            ax[i].set_ylim([-self.L, self.L])
-                
-        fig.tight_layout()
-        fig.subplots_adjust(wspace=0.1)
-        return fig
