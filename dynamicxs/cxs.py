@@ -95,9 +95,14 @@ class CXS(nn.Module):
         else:
             self.probe = nn.Conv2d(1, 1, 1, bias=False, padding='same', padding_mode='zeros')
             self.probe.weight = nn.Parameter(torch.tensor(1.).view(1,1,1,1), requires_grad=False)
-        
+    
+    
+    def shapes(self):
+        r"""Print detector and probe shapes.
+        """
         print('Detector: {:g} x {:g} \t'.format(self.n,self.n), end='')
         print('Probe: {:g} x {:g}'.format(*self.probe.weight.shape[-2:]))
+            
             
     def center_crop(self, y, k):
         r"""Crop ``y`` down to its central ``k x k`` pixels.
