@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import cmcrameri.cm as cm
 
-props = fm.FontProperties(family=['Myriad Pro', 'Trebuchet MS', 'sans-serif'], size='xx-large')
+props = fm.FontProperties(family=['Trebuchet MS', 'sans-serif'], size='xx-large')
 plt.rcParams['mathtext.default'] = 'regular'
 plt.rcParams['axes.linewidth'] = 1
 

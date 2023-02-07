@@ -107,7 +107,7 @@ class ODE(nn.Module):
             else:
                 return self._solve_no_grad(t, y0, device)
         else:
-            self._solve_no_grad(t)
+            self._solve_no_grad(t, device=device)
             
             
     def trim(self, t0=0):
@@ -209,6 +209,7 @@ class ODE(nn.Module):
             Object mapping scalar data to RGBA color values.
             
         """
+        y = y.cpu()
         if ntype == 'none':
             circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y]
             c = mpl.collections.PatchCollection(circles, lw=0, color='#527C9C')
@@ -279,8 +280,8 @@ class ODE(nn.Module):
             fig, ax = plt.subplots(1, n, figsize=(3*n,3), sharey=True)
             
             k = isinstance(y, list)
-            if k: y0, y = y
-            else: y0 = y
+            if k: y0, y = y[0].cpu(), y[1].cpu()
+            else: y0 = y.cpu()
             
             step = y.shape[0]//n
             for i in range(n):
@@ -301,6 +302,7 @@ class ODE(nn.Module):
             fig.subplots_adjust(wspace=0.1)
             
         else:
+            y = y.cpu()
             if ntype == 'mod':
                 y = np.mod(y, 2*np.pi)
             cmap, norm = self._color(y, ntype, vmin, vmax)
@@ -619,7 +621,7 @@ class LotkaVolterra(ODE):
                 
         """
         torch.manual_seed(seed)
-        self.y0 = self.L*torch.rand((M, self.N, 2)) - self.L/2.
+        self.y0 = nn.Parameter(self.L*torch.rand((M, self.N, 2)) - self.L/2., requires_grad=False)
         
         
     def forward(self, t, y):

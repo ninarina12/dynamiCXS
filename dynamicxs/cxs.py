@@ -74,7 +74,7 @@ class CXS(nn.Module):
         self.q = 2*np.pi/L*torch.arange(-n/2., n/2., dq)
         self.n = len(self.q)
         Qx, Qy = torch.meshgrid(self.q, self.q, indexing='xy')
-        self.Q = torch.stack((Qx.flatten(), Qy.flatten()), dim=1)
+        self.Q = nn.Parameter(torch.stack((Qx.flatten(), Qy.flatten()), dim=1), requires_grad=False)
         
         if f_mask:
             self.mask = nn.Parameter((Qx**2 + Qy**2 > (f_mask*2*np.pi/L*n)**2).flatten(), requires_grad=False)
@@ -266,8 +266,8 @@ class CXSGrid(CXS):
         # Real-space grid
         x = torch.arange(-L/2., L/2., L/N)
         X, Y = torch.meshgrid(x, x, indexing='xy')
-        r = torch.stack((X.flatten(), Y.flatten()), dim=1)
-        self.arg = nn.Parameter(torch.matmul(r, self.Q.transpose(1,0)), requires_grad=False)
+        self.r = torch.stack((X.flatten(), Y.flatten()), dim=1)
+        self.arg = nn.Parameter(torch.matmul(self.r, self.Q.transpose(1,0)), requires_grad=False)
         
         if f not in ['phase', 'unit']:
             self.f = getattr(self, 'f_unit')
@@ -305,7 +305,7 @@ class CXSPoint(CXS):
         super(CXSPoint, self).__init__(n, L, dq, f_probe, f_mask)
         
         self.R = R
-        self.f = self.f_sphere(torch.sqrt((self.Q**2).sum(dim=1)), R)
+        self.f = nn.Parameter(self.f_sphere(torch.sqrt((self.Q**2).sum(dim=1)), R), requires_grad=False)
     
     
     def f_sphere(self, q, R):
