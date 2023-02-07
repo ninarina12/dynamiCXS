@@ -181,6 +181,7 @@ class CXS(nn.Module):
         ntype : str
             Type of normalization to apply when displaying the image. The options are:
             
+            - ``none`` -- No normalization; point cloud data
             - ``mod`` -- Linear normalization modulo :math:`2 \pi`
             - ``log`` -- Logarithmic normalization scale
             - ``unit`` -- Linear normalization between 0 and 1
@@ -209,8 +210,13 @@ class CXS(nn.Module):
                                      ax[k].get_position().width, 0.04]))
         
         sm = [] 
-        try: self.R
-        except:
+        if (ntype == 'none') or hasattr(self, 'R'):
+            ode.plot_frame(ax[0], y, ntype='none')
+            
+            # Real-space density field
+            f = (self.f*(torch.exp(-1j*torch.matmul(y, self.Q.transpose(1,0))).sum(dim=0))).view(self.n,self.n)
+            
+        else:
             cax.insert(1, fig.add_axes([ax[0].get_position().x0, ax[0].get_position().y1 + 0.13,
                                         ax[0].get_position().width, 0.04]))
             sm.append(ode.plot_frame(ax[0], y[0].reshape(self.N, self.N), ntype=ntype))
@@ -219,20 +225,14 @@ class CXS(nn.Module):
             f_real = torch.matmul(self.f(y[0]), torch.cos(self.arg))
             f_imag = torch.matmul(self.f(y[0]), torch.sin(self.arg))
             f = (f_real - 1j*f_imag).view(self.n,self.n)
-        
-        else:
-            ode.plot_frame(ax[0], y)
-            
-            # Real-space density field
-            f = (self.f*(torch.exp(-1j*torch.matmul(y, self.Q.transpose(1,0))).sum(dim=0))).view(self.n,self.n)
-               
+  
         p = np.real(ifftshift(ifftn(fftshift(f))))
         
         sm.extend(self.plot_probe(ax[:2]))
         sm.append(ode.plot_frame(ax[2], self(y).reshape(self.n, self.n), vmin=vmin, vmax=vmax, ntype='log'))
         
-        l = 1./self.dq
-        sm.append(ode.plot_frame(ax[3], p, ntype='none', alpha=0.9, extent=(-l,l,-l,l)))
+        l = self.L/self.dq
+        sm.append(ode.plot_frame(ax[3], p, alpha=0.9, extent=(-l/2.,l/2.,-l/2.,l/2.)))
         ax[3].set_xlim(ax[0].get_xlim())
         ax[3].set_ylim(ax[0].get_ylim())
 
@@ -254,6 +254,7 @@ class CXS(nn.Module):
         ax[3].text(0.1, 0.85, r'$\Re(\rho(\mathbf{r}))$', color='white', ha='left', va='center',
                    transform=ax[3].transAxes, fontproperties=props)
         return fig
+    
     
     
 class CXSGrid(CXS):
@@ -296,6 +297,7 @@ class CXSGrid(CXS):
         y_imag = self.probe(y_imag.view(-1,1,self.n,self.n)).view(*size)
 
         return (y_real**2 + y_imag**2)*self.mask
+    
     
     
 class CXSPoint(CXS):

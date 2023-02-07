@@ -175,12 +175,15 @@ class ODE(nn.Module):
         ax : ``matplotlib.axes``
             Axis object on which to display the solution. 
         
-        y : ``torch.tensor`` of shape ``(N,N)``
-            Solution of the system to plot. The input should be reshaped to the dimensions of the simulation box.
+        y : ``torch.tensor``
+            Solution of the system to plot.
+            The input should be either reshaped to the dimensions of the simulation box or have a final dimension of 2
+            (only valid for ``ntype = none``).
         
         ntype : str
             Type of normalization to apply when displaying the image. The options are:
             
+            - ``none`` -- No normalization; point cloud data
             - ``mod`` -- Linear normalization modulo :math:`2 \pi`
             - ``log`` -- Logarithmic normalization scale
             - ``unit`` -- Linear normalization between 0 and 1
@@ -206,26 +209,37 @@ class ODE(nn.Module):
             Object mapping scalar data to RGBA color values.
             
         """
-        if ntype == 'mod':
-            y = np.mod(y, 2*np.pi)
-        cmap, norm = self._color(y, ntype, vmin, vmax)
-        sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+        if ntype == 'none':
+            circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y]
+            c = mpl.collections.PatchCollection(circles, lw=0, color='#527C9C')
+            ax.add_collection(c)
+
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_xlim([-self.L, self.L])
+            ax.set_ylim([-self.L, self.L])
         
-        colors = cmap(norm(y))
-        colors[...,-1] = alpha
-        
-        try: len(extent)
-        except:
-            ax.imshow(colors, extent=(-self.L/2., self.L/2., -self.L/2., self.L/2.), origin='lower')
-            ax.set_xlim(-self.L/2., self.L/2.)
-            ax.set_ylim(-self.L/2., self.L/2.)
         else:
-            ax.imshow(colors, extent=extent, origin='lower')
-            ax.set_xlim(extent[0], extent[1])
-            ax.set_ylim(extent[2], extent[3])      
-        
-        ax.axis('off')
-        return sm
+            if ntype == 'mod':
+                y = np.mod(y, 2*np.pi)
+            cmap, norm = self._color(y, ntype, vmin, vmax)
+            sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+
+            colors = cmap(norm(y))
+            colors[...,-1] = alpha
+
+            try: len(extent)
+            except:
+                ax.imshow(colors, extent=(-self.L/2., self.L/2., -self.L/2., self.L/2.), origin='lower')
+                ax.set_xlim(-self.L/2., self.L/2.)
+                ax.set_ylim(-self.L/2., self.L/2.)
+            else:
+                ax.imshow(colors, extent=extent, origin='lower')
+                ax.set_xlim(extent[0], extent[1])
+                ax.set_ylim(extent[2], extent[3])      
+
+            ax.axis('off')
+            return sm
             
         
     def plot_series(self, y, ntype=None, vmin=None, vmax=None, clabel=None):
@@ -233,13 +247,16 @@ class ODE(nn.Module):
         
         Parameters
         ----------
-        y : ``torch.tensor`` of shape ``(T,N,N)``
-            Solution of the system to plot. ``T`` denotes the time points at which the system was evaluated.
-            The input should be reshaped so that the last two dimensions match the dimensions of the simulation box.
-        
+        y : ``torch.tensor``
+            Solution of the system to plot.
+            The input should be either reshaped to the dimensions of the simulation box or have a final dimension of 2
+            (only valid for ``ntype = none``).
+            Alternately, ``y`` can be a list of 2 solution tensors, which will then be overlaid (only valid for ``ntype = none``).
+            
         ntype : str
             Type of normalization to apply when displaying the image. The options are:
             
+            - ``none`` -- No normalization; point cloud data
             - ``mod`` -- Linear normalization modulo :math:`2 \pi`
             - ``log`` -- Logarithmic normalization scale
             - ``unit`` -- Linear normalization between 0 and 1
@@ -257,26 +274,54 @@ class ODE(nn.Module):
             Text used to label the colorbar.
             
         """
-        if ntype == 'mod':
-            y = np.mod(y, 2*np.pi)
-        cmap, norm = self._color(y, ntype, vmin, vmax)
-        sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
-        
-        n = 6
-        fig, ax = plt.subplots(1, n + 1, figsize=(3*n,3), gridspec_kw={'width_ratios': n*[1] + [0.07]})
-        step = y.shape[0]//n
-        for i in range(n):
-            colors = cmap(norm(y[i*step]))
-            colors[..., -1] = 0.9
-            ax[i].imshow(colors, extent=(-1,1,-1,1), origin='lower')
-            ax[i].set_xlim(-1,1)
-            ax[i].set_ylim(-1,1)
-            ax[i].axis('off')
-                
-        plt.colorbar(sm, cax=ax[-1])
-        format_axis(ax[-1], props, xlabel='', ylabel=clabel, ybins=4)
-        fig.tight_layout()
-        fig.subplots_adjust(wspace=0.1)
+        if ntype == 'none':
+            n = 6
+            fig, ax = plt.subplots(1, n, figsize=(3*n,3), sharey=True)
+            
+            k = isinstance(y, list)
+            if k: y0, y = y
+            else: y0 = y
+            
+            step = y.shape[0]//n
+            for i in range(n):
+                circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y0[k*i*step]]
+                c = mpl.collections.PatchCollection(circles, lw=0, color='#D0D0D0')
+                ax[i].add_collection(c)
+
+                circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y[i*step]]
+                c = mpl.collections.PatchCollection(circles, lw=0, color='#527C9C')
+                ax[i].add_collection(c)
+
+                ax[i].set_xticks([])
+                ax[i].set_yticks([])
+                ax[i].set_xlim([-self.L, self.L])
+                ax[i].set_ylim([-self.L, self.L])
+
+            fig.tight_layout()
+            fig.subplots_adjust(wspace=0.1)
+            
+        else:
+            if ntype == 'mod':
+                y = np.mod(y, 2*np.pi)
+            cmap, norm = self._color(y, ntype, vmin, vmax)
+            sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+
+            n = 6
+            fig, ax = plt.subplots(1, n + 1, figsize=(3*n,3), gridspec_kw={'width_ratios': n*[1] + [0.07]})
+            step = y.shape[0]//n
+            for i in range(n):
+                colors = cmap(norm(y[i*step]))
+                colors[..., -1] = 0.9
+                ax[i].imshow(colors, extent=(-1,1,-1,1), origin='lower')
+                ax[i].set_xlim(-1,1)
+                ax[i].set_ylim(-1,1)
+                ax[i].axis('off')
+
+            plt.colorbar(sm, cax=ax[-1])
+            format_axis(ax[-1], props, xlabel='', ylabel=clabel, ybins=4)
+            fig.tight_layout()
+            fig.subplots_adjust(wspace=0.1)
+            
         return fig
     
     
@@ -575,65 +620,6 @@ class LotkaVolterra(ODE):
         """
         torch.manual_seed(seed)
         self.y0 = self.L*torch.rand((M, self.N, 2)) - self.L/2.
-        
-    
-    def plot_frame(self, ax, y, ntype=None, vmin=None, vmax=None, alpha=0.9, extent=None):
-        r"""Plot a single frame of an ODE solution.
-        
-        Parameters
-        ----------
-        ax : ``matplotlib.axes``
-            Axis object on which to display the solution. 
-        
-        y : ``torch.tensor`` of shape ``(N,2)``
-            Solution of the system to plot.
-        
-        """
-        if ntype:
-            return super().plot_frame(ax, y, ntype, vmin, vmax, alpha, extent)
-        else:
-            circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y]
-            c = mpl.collections.PatchCollection(circles, lw=0, color='#527C9C')
-            ax.add_collection(c)
-
-            ax.set_xticks([])
-            ax.set_yticks([])
-            ax.set_xlim([-self.L, self.L])
-            ax.set_ylim([-self.L, self.L])
-            
-    
-    def plot_series(self, y, ntype=None, vmin=None, vmax=None, clabel=None):
-        r"""Plot a time series of frames of an ODE solution.
-        
-        Parameters
-        ----------
-        y : ``torch.tensor`` of shape ``(T,N,2)``
-            Solution of the system to plot. ``T`` denotes the time points at which the system was evaluated.
-            
-        """
-        if ntype:
-            return super().plot_series(y, ntype, vmin, vmax, clabel)
-        else:
-            n = 6
-            fig, ax = plt.subplots(1, n, figsize=(3*n,3), sharey=True)
-            step = y.shape[0]//n
-            for i in range(n):
-                circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y[0]]
-                c = mpl.collections.PatchCollection(circles, lw=0, color='#D0D0D0', )
-                ax[i].add_collection(c)
-
-                circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y[i*step]]
-                c = mpl.collections.PatchCollection(circles, lw=0, color='#527C9C')
-                ax[i].add_collection(c)
-
-                ax[i].set_xticks([])
-                ax[i].set_yticks([])
-                ax[i].set_xlim([-self.L, self.L])
-                ax[i].set_ylim([-self.L, self.L])
-
-            fig.tight_layout()
-            fig.subplots_adjust(wspace=0.1)
-            return fig
         
         
     def forward(self, t, y):
