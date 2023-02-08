@@ -641,8 +641,8 @@ class LotkaVolterra(ODE):
             Derivative of the system.
                 
         """
-        x0 = y[...,[0]].mean(dim=-2, keepdims=True) + 1.
-        y0 = y[...,[1]].mean(dim=-2, keepdims=True) + 1.
+        x0 = y[...,[0]].mean(dim=-2, keepdims=True) + self.L/2.
+        y0 = y[...,[1]].mean(dim=-2, keepdims=True) + self.L/2.
         dx = self.alpha*x0 - self.beta*x0*y0
         dy = self.delta*x0*y0 - self.gamma*y0
         dx = torch.tile(dx, (1,self.N,1))
