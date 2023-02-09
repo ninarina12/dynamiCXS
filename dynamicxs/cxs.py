@@ -127,12 +127,12 @@ class CXS(nn.Module):
     
     
     def plot_probe(self, ax):
-        r"""Plot the real and reciprocal space views of the probe.
+        r"""Plot the real and, optionally, reciprocal space views of the probe.
             
         Parameters
         ----------
-        ax : list of ``matplotlib.axes``
-            List of axis objects on which to display the images.
+        ax : ``matplotlib.axes``
+            Axis or list of axis objects on which to display the image(s).
                 
         Returns
         -------
@@ -148,22 +148,31 @@ class CXS(nn.Module):
         probe = np.exp((-(_r)**2).sum(axis=0)/(2.*(f_probe*self.L)**2))
         probe /= probe.max()
         
-        sm = []
-        sm.append(ax[0].imshow(probe, cmap=self.gmap, vmin=0., vmax=1.,
-                               extent=(-self.L/2.,self.L/2.,-self.L/2.,self.L/2.), zorder=1))
-        
         circles = [plt.Circle((0,0), radius=k*f_probe*self.L) for k in range(1,2)]
         c = mpl.collections.PatchCollection(circles, fc='none', ec='white', ls='dashed')
-        ax[0].add_collection(c)
-        ax[0].set_xlim([-self.L/2., self.L/2.])
-        ax[0].set_ylim([-self.L/2., self.L/2.])
             
-        sm.append(ax[1].imshow(self.probe.weight[0,0].cpu(), origin='lower', cmap=self.cmap, vmin=0, vmax=1))
-        ax[1].axis('off')
-        
-        k = self.probe.weight.shape[-1]
-        ax[1].text(0.9, 0.85, str(k) + r'$\times$' + str(k), color='white', ha='right', va='center',
-                   transform=ax[1].transAxes, fontproperties=props)
+        sm = []
+        try: len(ax)
+        except:
+            sm.append(ax.imshow(probe, cmap=self.gmap, vmin=0., vmax=1.,
+                                extent=(-self.L/2.,self.L/2.,-self.L/2.,self.L/2.), zorder=1))
+            ax.add_collection(c)
+            ax.set_xlim([-self.L/2., self.L/2.])
+            ax.set_ylim([-self.L/2., self.L/2.])
+            
+        else:
+            sm.append(ax[0].imshow(probe, cmap=self.gmap, vmin=0., vmax=1.,
+                                   extent=(-self.L/2.,self.L/2.,-self.L/2.,self.L/2.), zorder=1))
+            ax[0].add_collection(c)
+            ax[0].set_xlim([-self.L/2., self.L/2.])
+            ax[0].set_ylim([-self.L/2., self.L/2.])
+
+            sm.append(ax[1].imshow(self.probe.weight[0,0].cpu(), origin='lower', cmap=self.cmap, vmin=0, vmax=1))
+            ax[1].axis('off')
+
+            k = self.probe.weight.shape[-1]
+            ax[1].text(0.9, 0.85, str(k) + r'$\times$' + str(k), color='white', ha='right', va='center',
+                       transform=ax[1].transAxes, fontproperties=props)
         return sm
     
     
@@ -258,7 +267,7 @@ class CXS(nn.Module):
     
     
 class CXSGrid(CXS):
-    def __init__(self, N, n, L=1., dq=1., f_probe=None, f_mask=None, f='unit'):
+    def __init__(self, N, n, L=1., dq=1., f_probe=None, f_mask=None, f=None):
         super(CXSGrid, self).__init__(n, L, dq, f_probe, f_mask)
         
         self.N = N
@@ -269,8 +278,8 @@ class CXSGrid(CXS):
         self.r = torch.stack((X.flatten(), Y.flatten()), dim=1)
         self.arg = nn.Parameter(torch.matmul(self.r, self.Q.transpose(1,0)), requires_grad=False)
         
-        if f not in ['phase', 'unit']:
-            self.f = getattr(self, 'f_unit')
+        if (f not in ['phase']) or (f==None):
+            self.f = getattr(self, 'f_none')
         else:
             self.f = getattr(self, 'f_' + f)
             
@@ -279,7 +288,7 @@ class CXSGrid(CXS):
         return 1. + pol*torch.cos(y)
         
         
-    def f_unit(self, y, pol=1.):
+    def f_none(self, y, pol=1.):
         return y
             
         
@@ -307,7 +316,6 @@ class CXSPoint(CXS):
         self.R = R
         self.f = nn.Parameter(self.f_sphere(torch.sqrt((self.Q**2).sum(dim=1)), R), requires_grad=False)
     
-    
     def f_sphere(self, q, R):
         V = 4./3.*np.pi*R**3
         f = V*torch.ones_like(q)
@@ -318,9 +326,11 @@ class CXSPoint(CXS):
         
     def forward(self, y):
         arg = torch.matmul(y, self.Q.transpose(1,0))
-
-        y_real = self.f*(torch.cos(arg).sum(dim=-2))
-        y_imag = self.f*(torch.sin(arg).sum(dim=-2))
+        th = ((y**2).sum(dim=-1, keepdims=True) < self.L**2)
+        
+        # Threshold values outside the domain
+        y_real = self.f*((th*torch.cos(arg)).sum(dim=-2))
+        y_imag = self.f*((th*torch.sin(arg)).sum(dim=-2))
         
         # Convolve with probe
         size = y_real.shape
