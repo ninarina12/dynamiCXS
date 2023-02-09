@@ -316,6 +316,7 @@ class CXSPoint(CXS):
         self.R = R
         self.f = nn.Parameter(self.f_sphere(torch.sqrt((self.Q**2).sum(dim=1)), R), requires_grad=False)
     
+    
     def f_sphere(self, q, R):
         V = 4./3.*np.pi*R**3
         f = V*torch.ones_like(q)
@@ -326,6 +327,8 @@ class CXSPoint(CXS):
         
     def forward(self, y):
         arg = torch.matmul(y, self.Q.transpose(1,0))
+        
+        # TO DO: Formalize threshold
         th = ((y**2).sum(dim=-1, keepdims=True) < self.L**2)
         
         # Threshold values outside the domain
