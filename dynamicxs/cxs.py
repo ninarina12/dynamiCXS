@@ -6,8 +6,8 @@ import time
 import torch
 import torch.nn as nn
 
-from torch.fft import fftn, ifftn, fftshift, ifftshift
-from utils import cm, props, format_axis
+from torch.fft import fft2, ifft2, fftshift, ifftshift
+from display import cm, props, format_axis
 
 
 class CXS(nn.Module):
@@ -235,7 +235,7 @@ class CXS(nn.Module):
             f_imag = torch.matmul(self.f(y[0]), torch.sin(self.arg))
             f = (f_real - 1j*f_imag).view(self.n,self.n)
   
-        p = np.real(ifftshift(ifftn(fftshift(f))))
+        p = np.real(ifftshift(ifft2(fftshift(f))))
         
         sm.extend(self.plot_probe(ax[:2]))
         sm.append(ode.plot_frame(ax[2], self(y).reshape(self.n, self.n), vmin=vmin, vmax=vmax, ntype='log'))

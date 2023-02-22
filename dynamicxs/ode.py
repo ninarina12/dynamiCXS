@@ -8,7 +8,7 @@ import torch.nn as nn
 
 from skimage.data import binary_blobs
 from torchdiffeq import odeint, odeint_adjoint
-from utils import cm, props, format_axis
+from display import cm, props, format_axis
 
 
 class ODE(nn.Module):
@@ -163,7 +163,7 @@ class ODE(nn.Module):
                 y0_batch = torch.cat((y0_batch, self.y[b[i][0], b[i][1]][None,:]))
                 y_batch = torch.cat(
                     (y_batch, torch.stack([self.y[b[i][0]+j, b[i][1]] for j in range(batch_time)], dim=0)[:,None,:]),
-                    axis=1)
+                    dim=1)
         return t_batch, y0_batch, y_batch
 
 
@@ -641,8 +641,9 @@ class LotkaVolterra(ODE):
             Derivative of the system.
                 
         """
-        x0 = y[...,[0]].mean(dim=-2, keepdims=True) + self.L/2.
-        y0 = y[...,[1]].mean(dim=-2, keepdims=True) + self.L/2.
+        _x, _y = y.split([1,1], dim=-1)
+        x0 = _x.mean(dim=-2, keepdims=True) + self.L/2.
+        y0 = _y.mean(dim=-2, keepdims=True) + self.L/2.
         dx = self.alpha*x0 - self.beta*x0*y0
         dy = self.delta*x0*y0 - self.gamma*y0
         dx = torch.tile(dx, (1,self.N,1))

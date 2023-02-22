@@ -55,7 +55,7 @@ sys.path.insert(0, os.path.abspath('./../..'))
 def setup(app):
 	import mock
 	
-	MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'skimage.data', 'torchdiffeq', 'utils']
+	MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'skimage.data', 'torchdiffeq', 'display', 'utils']
 	
 	sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
 
