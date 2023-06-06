@@ -1,6 +1,12 @@
+import numpy as np
 import torch
 
 from itertools import product
+
+
+def laplacian_of_gaussian(x, s=1.):
+    n = x.shape[0]
+    return ((x**2).sum(axis=0)/s**2 - n)*np.exp(-(x**2).sum(axis=0)/(2*s**2))/np.sqrt((2*np.pi)**n)/s**(n+2)
 
 
 class TorchRegularGridInterpolator:

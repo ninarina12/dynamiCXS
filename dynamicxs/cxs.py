@@ -154,14 +154,14 @@ class CXS(nn.Module):
         sm = []
         try: len(ax)
         except:
-            sm.append(ax.imshow(probe, cmap=self.gmap, vmin=0., vmax=1.,
+            sm.append(ax.imshow(probe, origin='lower', cmap=self.gmap, vmin=0., vmax=1.,
                                 extent=(-self.L/2.,self.L/2.,-self.L/2.,self.L/2.), zorder=1))
             ax.add_collection(c)
             ax.set_xlim([-self.L/2., self.L/2.])
             ax.set_ylim([-self.L/2., self.L/2.])
             
         else:
-            sm.append(ax[0].imshow(probe, cmap=self.gmap, vmin=0., vmax=1.,
+            sm.append(ax[0].imshow(probe, origin='lower', cmap=self.gmap, vmin=0., vmax=1.,
                                    extent=(-self.L/2.,self.L/2.,-self.L/2.,self.L/2.), zorder=1))
             ax[0].add_collection(c)
             ax[0].set_xlim([-self.L/2., self.L/2.])
@@ -176,7 +176,7 @@ class CXS(nn.Module):
         return sm
     
     
-    def plot_example(self, ode, y, ntype=None, vmin=None, vmax=None):
+    def plot_example(self, ode, y, ntype=None, vmin=None, vmax=None, eta=0):
         r"""Plot images visualizing the scattering conditions of a given example.
             
         Parameters
@@ -191,18 +191,24 @@ class CXS(nn.Module):
             Type of normalization to apply when displaying the image. The options are:
             
             - ``none`` -- No normalization; point cloud data
+            - ``sym`` -- Symmetric linear normalization scale
+            - ``unit`` -- Linear normalization between 0 and 1
             - ``mod`` -- Linear normalization modulo :math:`2 \pi`
             - ``log`` -- Logarithmic normalization scale
-            - ``unit`` -- Linear normalization between 0 and 1
+            - ``symlog`` -- Symmetric logarithmic normalization scale
             - ``None`` -- Linear normalization between the min. and max. values of ``y``
             
             The default is ``None``.     
         
         vmin : float, optional
-            Minimum normalization value when ``ntype`` is ``log``.    
+            Minimum normalization value.    
         
         vmax : float, optional
-            Maximum normalization value when ``ntype`` is ``log``.
+            Maximum normalization value.
+            
+        
+        eta : float, optional
+            Poisson noise factor.
                 
         Returns
         -------
@@ -210,7 +216,7 @@ class CXS(nn.Module):
             Figure object.
                 
         """
-        fig, ax = plt.subplots(1,4, figsize=(14,3.5))
+        fig, ax = plt.subplots(1,5, figsize=(14,3))
         fig.subplots_adjust(wspace=0.2)
 
         cax = []
@@ -223,7 +229,7 @@ class CXS(nn.Module):
             ode.plot_frame(ax[0], y, ntype='none')
             
             # Real-space density field
-            f = (self.f*(torch.exp(-1j*torch.matmul(y, self.Q.transpose(1,0))).sum(dim=0))).view(self.n,self.n)
+            f = (self.f*(torch.exp(-1j*torch.matmul(y[...,:2], self.Q.transpose(1,0))).sum(dim=0))).view(self.n,self.n)
             
         else:
             cax.insert(1, fig.add_axes([ax[0].get_position().x0, ax[0].get_position().y1 + 0.13,
@@ -234,40 +240,63 @@ class CXS(nn.Module):
             f_real = torch.matmul(self.f(y[0]), torch.cos(self.arg))
             f_imag = torch.matmul(self.f(y[0]), torch.sin(self.arg))
             f = (f_real - 1j*f_imag).view(self.n,self.n)
-  
-        p = np.real(ifftshift(ifft2(fftshift(f))))
+            
+        p = ifftshift(ifft2(fftshift(f)))
         
         sm.extend(self.plot_probe(ax[:2]))
-        sm.append(ode.plot_frame(ax[2], self(y).reshape(self.n, self.n), vmin=vmin, vmax=vmax, ntype='log'))
+        Y = self(y).reshape(self.n, self.n)
+        if eta:
+            Y = torch.poisson(Y/eta)
+            vmin /= eta
+            vmax /= eta
+        sm.append(ode.plot_frame(ax[2], Y, vmin=vmin, vmax=vmax, ntype='log'))
         
         l = self.L/self.dq
-        sm.append(ode.plot_frame(ax[3], p, alpha=0.9, extent=(-l/2.,l/2.,-l/2.,l/2.)))
+        A = torch.abs(p).cpu()
+        sm.append(ax[3].imshow(A/A.max(), origin='lower', extent=(-l/2.,l/2.,-l/2.,l/2.), cmap=self.cmap, vmin=0, vmax=1))
+        self.plot_probe(ax[3])
+        ax[3].axis('off')
         ax[3].set_xlim(ax[0].get_xlim())
         ax[3].set_ylim(ax[0].get_ylim())
+        
+        sm.append(ode.plot_frame(ax[4], torch.angle(p), alpha=0.9, extent=(-l/2.,l/2.,-l/2.,l/2.), ntype='mod'))
+        self.plot_probe(ax[4])
+        ax[4].set_xlim(ax[0].get_xlim())
+        ax[4].set_ylim(ax[0].get_ylim())
 
         cbar = []
         cprops = props.copy()
         cprops.set_size(props.get_size()-2)
         for k in range(len(sm)):
             cbar.append(plt.colorbar(sm[k], cax=cax[k], orientation='horizontal'))
-            if (k > 0) & (len(sm) > 4):
+            if (k == 1) & (len(sm) > len(ax)):
                 cbar[k].ax.xaxis.set_ticks_position('top')
-            format_axis(cbar[k].ax, cprops, xbins=3)
-
-        ax[0].text(0.1, 0.85, r'$\theta(\mathbf{r}) \odot p(\mathbf{r})$', color='white', ha='left', va='center',
+                
+            if sm[k].norm.vmax == 1:
+                format_axis(cbar[k].ax, cprops, xbins=3)
+            else:
+                format_axis(cbar[k].ax, cprops, xbins=4)
+                
+            if sm[k].norm.vmax == np.pi:
+                cbar[k].ax.set_xticks([-np.pi, 0, np.pi])
+                cbar[k].ax.set_xticklabels([r'$-\pi$', '0', r'$\pi$'])
+        
+        ax[0].text(0.1, 0.85, r'$\mathcal{O}(\mathbf{r}) \odot p(\mathbf{r})$', color='white', ha='left', va='center',
                    transform=ax[0].transAxes, fontproperties=props)
         ax[1].text(0.1, 0.85, r'$P(\mathbf{q})$', color='white', ha='left', va='center',
                    transform=ax[1].transAxes, fontproperties=props)
         ax[2].text(0.1, 0.85, r'$I(\mathbf{q})$', color='white', ha='left', va='center',
                    transform=ax[2].transAxes, fontproperties=props)
-        ax[3].text(0.1, 0.85, r'$\Re(\rho(\mathbf{r}))$', color='white', ha='left', va='center',
+        ax[3].text(0.1, 0.85, r'$|\rho(\mathbf{r})| \odot p(\mathbf{r})$', color='white', ha='left', va='center',
                    transform=ax[3].transAxes, fontproperties=props)
+        ax[4].text(0.1, 0.85, r'$\theta(\rho(\mathbf{r})) \odot p(\mathbf{r})$', color='white', ha='left', va='center',
+                   transform=ax[4].transAxes, fontproperties=props)
         return fig
     
     
     
 class CXSGrid(CXS):
-    def __init__(self, N, n, L=1., dq=1., f_probe=None, f_mask=None, f=None):
+    def __init__(self, N, n, L=1., dq=1., f_probe=None, f_mask=None, f=None, w=None):
         super(CXSGrid, self).__init__(n, L, dq, f_probe, f_mask)
         
         self.N = N
@@ -283,22 +312,28 @@ class CXSGrid(CXS):
         else:
             self.f = getattr(self, 'f_' + f)
             
-            
-    def f_phase(self, y, pol=1.):
-        return 1. + pol*torch.cos(y)
+        # Channel weights
+        if w:
+            self.w = nn.Parameter(torch.tensor(w)[None,:,None], requires_grad=False)
+        else:
+            self.w = 1.
         
         
-    def f_none(self, y, pol=1.):
+    def f_phase(self, y):
+        return torch.cos(y)
+    
+    
+    def f_none(self, y):
         return y
             
-        
-    def forward(self, y, pol=1):
-        y_real = torch.matmul(self.f(y, pol), torch.cos(self.arg))
-        y_imag = torch.matmul(self.f(y, pol), torch.sin(self.arg))
-
-        # Sum over channel dimension
-        y_real = y_real.sum(dim=-2)
-        y_imag = y_imag.sum(dim=-2)
+    
+    def I_xnm(self, y):
+        y_real = torch.cos(self.arg)
+        y_imag = torch.sin(self.arg)
+             
+        # Weighted sum over channel dimension
+        y_real = (self.w*y_real).sum(dim=-2)
+        y_imag = (self.w*y_imag).sum(dim=-2)
 
         # Convolve with probe
         size = y_real.shape
@@ -306,6 +341,26 @@ class CXSGrid(CXS):
         y_imag = self.probe(y_imag.view(-1,1,self.n,self.n)).view(*size)
 
         return (y_real**2 + y_imag**2)*self.mask
+        
+        
+    def I_xmcd(self, y):
+        y_real = torch.matmul(self.f(y), torch.cos(self.arg))
+        y_imag = torch.matmul(self.f(y), torch.sin(self.arg))
+             
+        # Weighted sum over channel dimension
+        y_real = (self.w*y_real).sum(dim=-2)
+        y_imag = (self.w*y_imag).sum(dim=-2)
+
+        # Convolve with probe
+        size = y_real.shape
+        y_real = self.probe(y_real.view(-1,1,self.n,self.n)).view(*size)
+        y_imag = self.probe(y_imag.view(-1,1,self.n,self.n)).view(*size)
+
+        return (y_real**2 + y_imag**2)*self.mask
+    
+        
+    def forward(self, y, c=0.1):
+        return c*self.I_xnm(y) + self.I_xmcd(y)
     
     
     
@@ -315,6 +370,11 @@ class CXSPoint(CXS):
         
         self.R = R
         self.f = nn.Parameter(self.f_sphere(torch.sqrt((self.Q**2).sum(dim=1)), R), requires_grad=False)
+        self.fm = self.f_phase
+    
+    
+    def f_phase(self, y, p=1.):
+        return p*torch.cos(y)
     
     
     def f_sphere(self, q, R):
@@ -325,15 +385,25 @@ class CXSPoint(CXS):
         return f
         
         
-    def forward(self, y):
-        arg = torch.matmul(y, self.Q.transpose(1,0))
+    def forward(self, y, p=0.1):
+        arg = torch.matmul(y[...,:2], self.Q.transpose(1,0))
         
         # TO DO: Formalize threshold
-        th = ((y**2).sum(dim=-1, keepdims=True) < self.L**2)
+        ndim = y.shape[-1]
+        if ndim > 2: ndim -= 1 # Now pretending last dimension of 3- or 4-D systems is internal phase
+        th = (y[...,:ndim]**2).sum(dim=-1, keepdims=True) < self.L**2
         
-        # Threshold values outside the domain
-        y_real = self.f*((th*torch.cos(arg)).sum(dim=-2))
-        y_imag = self.f*((th*torch.sin(arg)).sum(dim=-2))
+        # Threshold outside domain
+        cosy = th*torch.cos(arg)
+        siny = th*torch.sin(arg)
+            
+        # Charge contribution
+        y_real = self.f*(cosy.sum(dim=-2))
+        y_imag = self.f*(siny.sum(dim=-2))
+        
+        # Phase contribution
+        #y_real += (self.fm(y[...,[-1]], p)*cosy).sum(dim=-2)
+        #y_imag += (self.fm(y[...,[-1]], p)*siny).sum(dim=-2)
         
         # Convolve with probe
         size = y_real.shape
