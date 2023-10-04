@@ -53,7 +53,7 @@ sys.path.insert(0, os.path.abspath('./../..'))
 
 # to display docs when using imported packages
 def setup(app):
-	import numpy, matplotlib, matplotlib.pyplot, torchdiffeq, display, utils
+	#import numpy, matplotlib, matplotlib.pyplot, torchdiffeq, display, utils
 	from dynamicxs import ode, cxs
     
 	ode.ODE.__name__ = 'ODE'
