@@ -48,15 +48,14 @@ nbsphinx_execute = 'never'
 
 import os
 import sys
+
 #Location of Sphinx files
 sys.path.insert(0, os.path.abspath('./../..'))
 
 # to display docs when using imported packages
 def setup(app):
 	import mock
-    
 	MOCK_MODULES = ['display', 'utils']
-    
 	sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
     
 	from dynamicxs import ode, cxs
