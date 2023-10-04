@@ -30,11 +30,16 @@ def format_axis(ax, props, xlabel='', ylabel='', xbins=None, ybins=None):
         except: ax.locator_params(axis='x', numticks=xbins+1)
     if ybins:
         try: ax.locator_params(axis='y', nbins=ybins)
-        except: ax.locator_params(axis='y', numticks=ybins+1)  
+        except: ax.locator_params(axis='y', numticks=ybins+1)
             
             
 def format_str(x):
-    if isinstance(x, float) or isinstance(x, int):
-        return str(x).replace('.', 'p')
+    if isinstance(x, float):
+        if x > 9:
+            return '{:.1g}'.format(x).replace('+', '')
+        else:
+            return str(x).replace('.', 'p')
+    elif isinstance(x, int):
+        return str(x)
     else:
-        return '0'
+        return ''

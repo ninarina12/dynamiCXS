@@ -9,10 +9,6 @@ ODE Class
     :members:
     :show-inheritance:
 
-.. autoclass:: dynamicxs.ode.GrayScott
-    :members:
-    :show-inheritance:
-
 .. autoclass:: dynamicxs.ode.LotkaVolterra
     :members:
     :show-inheritance:

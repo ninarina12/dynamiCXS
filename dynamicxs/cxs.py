@@ -29,7 +29,7 @@ class CXS(nn.Module):
     f_probe : float
         Standard deviation of the Gaussian probe intensity as a fraction of ``L``.
         
-    f_mask : 
+    f_mask : float
         Radius of center beam stop as a fraction of ``n``.
 
     Attributes
@@ -59,7 +59,7 @@ class CXS(nn.Module):
     def __init__(self, n, L=1., dq=1., f_probe=None, f_mask=None):
         super(CXS, self).__init__()
         # TO DO:
-        # - Passing in a real space probe as an argument, default to gaussian if not passed
+        # - Enable passing in an illumination function as an argument and default to gaussian if not passed
         # - Handle complex probe (manually split into convolutions with real and imag parts of probe fft)
         
         self.L = L
@@ -68,7 +68,7 @@ class CXS(nn.Module):
         self.cmap = plt.cm.bone
         self.gmap = self.cmap.copy()
         self.gmap(0);
-        self.gmap._lut[:self.gmap.N,3] = np.linspace(0, 0.7, self.gmap.N)[::-1]
+        self.gmap._lut[:self.gmap.N,3] = np.linspace(0, 0.5, self.gmap.N)[::-1]
         
         # Reciprocal-space coordinates
         self.q = 2*np.pi/L*torch.arange(-n/2., n/2., dq)
@@ -176,7 +176,7 @@ class CXS(nn.Module):
         return sm
     
     
-    def plot_example(self, ode, y, ntype=None, vmin=None, vmax=None, eta=0):
+    def plot_example(self, ode, y, ntype=None, vmin=None, vmax=None, lmax=None):
         r"""Plot images visualizing the scattering conditions of a given example.
             
         Parameters
@@ -190,7 +190,7 @@ class CXS(nn.Module):
         ntype : str
             Type of normalization to apply when displaying the image. The options are:
             
-            - ``none`` -- No normalization; point cloud data
+            - ``none`` -- No normalization
             - ``sym`` -- Symmetric linear normalization scale
             - ``unit`` -- Linear normalization between 0 and 1
             - ``mod`` -- Linear normalization modulo :math:`2 \pi`
@@ -204,11 +204,11 @@ class CXS(nn.Module):
             Minimum normalization value.    
         
         vmax : float, optional
-            Maximum normalization value.
-            
+            Maximum normalization value.     
         
-        eta : float, optional
-            Poisson noise factor.
+        lmax : float, optional
+            Maximum intensity, proxy for maximum expected event frequency of Poisson process.
+            The default value is ``None``, corresponding to the ideal scattered intensity without Poisson sampling.
                 
         Returns
         -------
@@ -234,21 +234,25 @@ class CXS(nn.Module):
         else:
             cax.insert(1, fig.add_axes([ax[0].get_position().x0, ax[0].get_position().y1 + 0.13,
                                         ax[0].get_position().width, 0.04]))
-            sm.append(ode.plot_frame(ax[0], y[0].reshape(self.N, self.N), ntype=ntype))
+            sm.append(ode.plot_frame(ax[0], y.sum(dim=-2).reshape(self.N, self.N), ntype=ntype))
                 
             # Real-space density field
-            f_real = torch.matmul(self.f(y[0]), torch.cos(self.arg))
-            f_imag = torch.matmul(self.f(y[0]), torch.sin(self.arg))
+            f_real = torch.matmul(self.f(y), torch.cos(self.arg)).sum(dim=-2)
+            f_imag = torch.matmul(self.f(y), torch.sin(self.arg)).sum(dim=-2)
             f = (f_real - 1j*f_imag).view(self.n,self.n)
             
         p = ifftshift(ifft2(fftshift(f)))
         
         sm.extend(self.plot_probe(ax[:2]))
         Y = self(y).reshape(self.n, self.n)
-        if eta:
-            Y = torch.poisson(Y/eta)
-            vmin /= eta
-            vmax /= eta
+        
+        if lmax:
+            Y *= lmax/Y.max()
+            Y = torch.poisson(Y)
+            
+            vmin = vmin if vmin else 10**(np.log10(lmax) - 3)
+            vmax = vmax if vmax else lmax
+            
         sm.append(ode.plot_frame(ax[2], Y, vmin=vmin, vmax=vmax, ntype='log'))
         
         l = self.L/self.dq
@@ -283,9 +287,9 @@ class CXS(nn.Module):
         
         ax[0].text(0.1, 0.85, r'$\mathcal{O}(\mathbf{r}) \odot p(\mathbf{r})$', color='white', ha='left', va='center',
                    transform=ax[0].transAxes, fontproperties=props)
-        ax[1].text(0.1, 0.85, r'$P(\mathbf{q})$', color='white', ha='left', va='center',
+        ax[1].text(0.1, 0.85, r'$P(\mathbf{Q})$', color='white', ha='left', va='center',
                    transform=ax[1].transAxes, fontproperties=props)
-        ax[2].text(0.1, 0.85, r'$I(\mathbf{q})$', color='white', ha='left', va='center',
+        ax[2].text(0.1, 0.85, r'$I(\mathbf{Q})$', color='white', ha='left', va='center',
                    transform=ax[2].transAxes, fontproperties=props)
         ax[3].text(0.1, 0.85, r'$|\rho(\mathbf{r})| \odot p(\mathbf{r})$', color='white', ha='left', va='center',
                    transform=ax[3].transAxes, fontproperties=props)
@@ -296,7 +300,64 @@ class CXS(nn.Module):
     
     
 class CXSGrid(CXS):
-    def __init__(self, N, n, L=1., dq=1., f_probe=None, f_mask=None, f=None, w=None):
+    r"""Class to compute the coherent X-ray scattering pattern of an object on a uniform grid.
+
+    Parameters
+    ----------
+    N: int
+        Dimension of real-space grid ``N x N``.
+        
+    n : int
+        Dimension of reciprocal-space pattern ``n x n`` for ``dq = 1`` (default).
+        When ``dq < 1``, the new dimension ``n`` will be recomputed and saved as an attribute.
+
+    L : float
+        Length of the real-space simulation box ``(L x L)``.
+        
+    dq : float
+        Sampling in reciprocal space, `i.e.` the fraction of :math:`2 \pi/L` at which to sample.
+        Default is ``dq = 1``, corresponding to a spacing of :math:`2 \pi/L`.
+        
+    f_probe : float
+        Standard deviation of the Gaussian probe intensity as a fraction of ``L``.
+        
+    f_mask : float
+        Radius of center beam stop as a fraction of ``n``.
+        
+    f: str
+        Form factor function to use. Current options are ``phase`` or ``none`` (identity).
+        
+    w: list
+        List of relative weights on input channels.
+            
+    c: list
+        List of relative weights on non-magnetic and magnetic scattering channels.
+
+    Attributes
+    ----------
+    cmap : ``matplotlib.colors.Colormap``
+        Default colormap for plotting.
+        
+    gmap : ``matplotlib.colors.Colormap``
+        ``cmap`` with an opacity gradient.
+
+    q : ``torch.tensor``
+        1-D tensor of reciprocal space coordinates determined by the dimension ``n`` and sampling ``dq``.
+        
+    n : int
+        Recomputed dimension of reciprocal-space pattern ``n x n`` for the input sampling ``dq``.
+        
+    Q : ``torch.tensor``
+        2-D tensor of shape ``(n x n, 2)`` containing the reciprocal space coordinate grid.
+        
+    mask : ``torch.tensor``
+        Boolean tensor storing the masked detector pixels.
+        
+    probe : ``torch.nn.Conv2d``
+        Convolution operator for convolving the reciprocal space pattern with the probe.
+        
+    """
+    def __init__(self, N, n, L=1., dq=1., f_probe=None, f_mask=None, f=None, w=None, c=None):
         super(CXSGrid, self).__init__(n, L, dq, f_probe, f_mask)
         
         self.N = N
@@ -307,27 +368,62 @@ class CXSGrid(CXS):
         self.r = torch.stack((X.flatten(), Y.flatten()), dim=1)
         self.arg = nn.Parameter(torch.matmul(self.r, self.Q.transpose(1,0)), requires_grad=False)
         
-        if (f not in ['phase']) or (f==None):
-            self.f = getattr(self, 'f_none')
-        else:
-            self.f = getattr(self, 'f_' + f)
+        # Form factor
+        if (f not in ['phase']) or (f==None): self.f = getattr(self, 'f_none')
+        else: self.f = getattr(self, 'f_' + f)
+        
+        # Form factor channel weights
+        if w: self.w = nn.Parameter(torch.tensor(w)[None,:,None], requires_grad=False)
+        else: self.w = 1.
             
-        # Channel weights
-        if w:
-            self.w = nn.Parameter(torch.tensor(w)[None,:,None], requires_grad=False)
-        else:
-            self.w = 1.
+        # Scattering channel weights
+        if c: self.c = c
+        else: self.c = [0.,1.]
         
         
     def f_phase(self, y):
+        r"""Orientation-dependent form factor.
+            
+        Parameters
+        ----------
+        y : ``torch.tensor``
+            Tensor of phases at which to evaluate the form factor.
+                
+        Returns
+        -------
+        f : ``torch.tensor`` of shape ``y.shape``
+            Form factor evaluated at each point in ``y``.
+                
+        """
         return torch.cos(y)
     
     
     def f_none(self, y):
+        r"""Identity form factor.
+            
+        Parameters
+        ----------
+        y : ``torch.tensor``
+            Tensor of phases at which to evaluate the form factor.
+                
+        Returns
+        -------
+        f : ``torch.tensor`` of shape ``y.shape``
+            Form factor evaluated at each point in ``y``.
+                
+        """
         return y
             
     
-    def I_xnm(self, y):
+    def I_xnm(self):
+        r"""Non-magnetic scattering channel intensity.
+                
+        Returns
+        -------
+        I : ``torch.tensor``
+            Scattered intensity.
+                
+        """
         y_real = torch.cos(self.arg)
         y_imag = torch.sin(self.arg)
              
@@ -344,6 +440,19 @@ class CXSGrid(CXS):
         
         
     def I_xmcd(self, y):
+        r"""Magnetic scattering channel intensity.
+            
+        Parameters
+        ----------
+        y : ``torch.tensor``
+            Tensor of orientations over the real-space grid.
+                
+        Returns
+        -------
+        I : ``torch.tensor``
+            Scattered intensity.
+                
+        """
         y_real = torch.matmul(self.f(y), torch.cos(self.arg))
         y_imag = torch.matmul(self.f(y), torch.sin(self.arg))
              
@@ -359,51 +468,151 @@ class CXSGrid(CXS):
         return (y_real**2 + y_imag**2)*self.mask
     
         
-    def forward(self, y, c=0.1):
-        return c*self.I_xnm(y) + self.I_xmcd(y)
+    def forward(self, y):
+        r"""Compute the total scattered intensity.
+            
+        Parameters
+        ----------
+        y : ``torch.tensor``
+            Tensor of orientations over the real-space grid.
+                
+        Returns
+        -------
+        I : ``torch.tensor``
+            Scattered intensity.
+                
+        """
+        I = self.c[1]*self.I_xmcd(y)
+        if self.c[0]:
+            I += self.c[0]*self.I_xnm()
+        return I
     
     
     
 class CXSPoint(CXS):
-    def __init__(self, R, n, L=1., dq=1., f_probe=None, f_mask=None):
+    r"""Class to compute the coherent X-ray scattering pattern of a point cloud of spherical objects.
+
+    Parameters
+    ----------
+    R: int
+        Radius of spherical objects.
+        
+    n : int
+        Dimension of reciprocal-space pattern ``n x n`` for ``dq = 1`` (default).
+        When ``dq < 1``, the new dimension ``n`` will be recomputed and saved as an attribute.
+
+    L : float
+        Length of the real-space simulation box ``(L x L)``.
+        
+    dq : float
+        Sampling in reciprocal space, `i.e.` the fraction of :math:`2 \pi/L` at which to sample.
+        Default is ``dq = 1``, corresponding to a spacing of :math:`2 \pi/L`.
+        
+    f_probe : float
+        Standard deviation of the Gaussian probe intensity as a fraction of ``L``.
+        
+    f_mask : float
+        Radius of center beam stop as a fraction of ``n``.
+            
+    c: list
+        List of relative weights on non-magnetic and magnetic scattering channels.
+
+    Attributes
+    ----------
+    cmap : ``matplotlib.colors.Colormap``
+        Default colormap for plotting.
+        
+    gmap : ``matplotlib.colors.Colormap``
+        ``cmap`` with an opacity gradient.
+
+    q : ``torch.tensor``
+        1-D tensor of reciprocal space coordinates determined by the dimension ``n`` and sampling ``dq``.
+        
+    n : int
+        Recomputed dimension of reciprocal-space pattern ``n x n`` for the input sampling ``dq``.
+        
+    Q : ``torch.tensor``
+        2-D tensor of shape ``(n x n, 2)`` containing the reciprocal space coordinate grid.
+        
+    mask : ``torch.tensor``
+        Boolean tensor storing the masked detector pixels.
+        
+    probe : ``torch.nn.Conv2d``
+        Convolution operator for convolving the reciprocal space pattern with the probe.
+        
+    """
+    def __init__(self, R, n, L=1., dq=1., f_probe=None, f_mask=None, c=None):
         super(CXSPoint, self).__init__(n, L, dq, f_probe, f_mask)
         
         self.R = R
+        
+        # Form factor
         self.f = nn.Parameter(self.f_sphere(torch.sqrt((self.Q**2).sum(dim=1)), R), requires_grad=False)
-        self.fm = self.f_phase
+        
+        # Scattering channel weights
+        if c: self.c = c
+        else: self.c = [1.,0.1]
+            
     
-    
-    def f_phase(self, y, p=1.):
-        return p*torch.cos(y)
+    def f_phase(self, y):
+        r"""Orientation-dependent form factor.
+            
+        Parameters
+        ----------
+        y : ``torch.tensor``
+            Tensor of phases at which to evaluate the form factor.
+                
+        Returns
+        -------
+        f : ``torch.tensor`` of shape ``y.shape``
+            Form factor evaluated at each point in ``y``.
+                
+        """
+        return torch.cos(y)
     
     
     def f_sphere(self, q, R):
+        r"""Form factor of a sphere.
+            
+        Parameters
+        ----------
+        q : ``torch.tensor``
+            Tensor of reciprocal-space points at which to evaluate the form factor.
+            
+        R : float
+            Radius of sphere.
+                
+        Returns
+        -------
+        f : ``torch.tensor`` of shape ``q.shape``
+            Form factor evaluated at each point in ``q``.
+                
+        """
         V = 4./3.*np.pi*R**3
         f = V*torch.ones_like(q)
         f[q > 0.] = V*3*(torch.sin(q[q > 0.]*R) - q[q > 0.]*R*torch.cos(q[q > 0.]*R))/(q[q > 0.]*R)**3
         f /= f.max()
         return f
         
-        
-    def forward(self, y, p=0.1):
-        arg = torch.matmul(y[...,:2], self.Q.transpose(1,0))
-        
-        # TO DO: Formalize threshold
-        ndim = y.shape[-1]
-        if ndim > 2: ndim -= 1 # Now pretending last dimension of 3- or 4-D systems is internal phase
-        th = (y[...,:ndim]**2).sum(dim=-1, keepdims=True) < self.L**2
-        
-        # Threshold outside domain
-        cosy = th*torch.cos(arg)
-        siny = th*torch.sin(arg)
+    
+    def I_xnm(self, ys):
+        r"""Non-magnetic scattering channel intensity.
             
-        # Charge contribution
+        Parameters
+        ----------
+        ys : List of ``torch.tensors``
+            List of tensors of the real and imaginary parts of the phase term.
+                
+        Returns
+        -------
+        I : ``torch.tensor``
+            Scattered intensity.
+                
+        """
+        cosy, siny = ys
+        
         y_real = self.f*(cosy.sum(dim=-2))
         y_imag = self.f*(siny.sum(dim=-2))
-        
-        # Phase contribution
-        #y_real += (self.fm(y[...,[-1]], p)*cosy).sum(dim=-2)
-        #y_imag += (self.fm(y[...,[-1]], p)*siny).sum(dim=-2)
         
         # Convolve with probe
         size = y_real.shape
@@ -411,3 +620,61 @@ class CXSPoint(CXS):
         y_imag = self.probe(y_imag.view(-1,1,self.n,self.n)).view(*size)
         
         return (y_real**2 + y_imag**2)*self.mask
+    
+    
+    def I_xmcd(self, ys):
+        r"""Magnetic scattering channel intensity.
+            
+        Parameters
+        ----------
+        ys : List of ``torch.tensors``
+            List of tensors giving the orientations as well as the real and imaginary parts of the phase term.
+                
+        Returns
+        -------
+        I : ``torch.tensor``
+            Scattered intensity.
+                
+        """
+        y, cosy, siny = ys
+        
+        y_real = (self.f_phase(y[...,[-1]])*cosy).sum(dim=-2)
+        y_imag = (self.f_phase(y[...,[-1]])*siny).sum(dim=-2)
+        
+        # Convolve with probe
+        size = y_real.shape
+        y_real = self.probe(y_real.view(-1,1,self.n,self.n)).view(*size)
+        y_imag = self.probe(y_imag.view(-1,1,self.n,self.n)).view(*size)
+        
+        return (y_real**2 + y_imag**2)*self.mask
+        
+        
+    def forward(self, y):
+        r"""Compute the total scattered intensity.
+            
+        Parameters
+        ----------
+        y : ``torch.tensor``
+            Tensor of particle coordinates. The final dimension should correspond to orientations, if applicable.
+                
+        Returns
+        -------
+        I : ``torch.tensor``
+            Scattered intensity.
+                
+        """
+        arg = torch.matmul(y[...,:2], self.Q.transpose(1,0))
+        
+        # Threshold outside domain
+        ndim = y.shape[-1]
+        if ndim > 2:
+            ndim -= 1
+        th = (y[...,:ndim]**2).sum(dim=-1, keepdims=True) < (self.L/2.)**2
+        
+        cosy = th*torch.cos(arg)
+        siny = th*torch.sin(arg)
+        
+        I = self.c[0]*self.I_xnm([cosy, siny])
+        if self.c[1]:
+            I += self.c[1]*self.I_xmcd([y, cosy, siny])
+        return I

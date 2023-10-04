@@ -63,6 +63,9 @@ class ODE(nn.Module):
         elif ntype == 'mod':
             norm = plt.Normalize(vmin=-np.pi, vmax=np.pi)
             cmap = cm.romaO
+        elif ntype == 'symmod':
+            norm = plt.Normalize(vmin=-2*np.pi, vmax=2*np.pi)
+            cmap = cm.vik_r
         elif ntype == 'log':
             vmin = vmin if vmin else 1e2
             vmax = vmax if vmax else 1e5
@@ -181,21 +184,26 @@ class ODE(nn.Module):
             
         """
         T, M, _, D = self.y.shape
-        t_batch = self.t[:batch_time]
+        if batch_time == T:
+            b = np.random.choice(M, batch_size, replace=False)
+            return self.t[:], self.y0[b], self.y[:,b]
+        
+        else:
+            t_batch = self.t[:batch_time]
 
-        c = [[i,j] for i in range(T - batch_time) for j in range(M)]
-        b = [c[i] for i in np.random.choice(len(c), batch_size, replace=False)]
+            c = [[i,j] for i in range(T - batch_time) for j in range(M)]
+            b = [c[i] for i in np.random.choice(len(c), batch_size, replace=False)]
 
-        for i in range(len(b)):
-            if i==0:
-                y0_batch = self.y[b[i][0], b[i][1]][None,:]
-                y_batch = torch.stack([self.y[b[i][0]+j, b[i][1]] for j in range(batch_time)], dim=0)[:,None,:]
-            else:
-                y0_batch = torch.cat((y0_batch, self.y[b[i][0], b[i][1]][None,:]))
-                y_batch = torch.cat(
-                    (y_batch, torch.stack([self.y[b[i][0]+j, b[i][1]] for j in range(batch_time)], dim=0)[:,None,:]),
-                    dim=1)
-        return t_batch, y0_batch, y_batch
+            for i in range(len(b)):
+                if i==0:
+                    y0_batch = self.y[b[i][0], b[i][1]][None,:]
+                    y_batch = torch.stack([self.y[b[i][0]+j, b[i][1]] for j in range(batch_time)], dim=0)[:,None,:]
+                else:
+                    y0_batch = torch.cat((y0_batch, self.y[b[i][0], b[i][1]][None,:]))
+                    y_batch = torch.cat(
+                        (y_batch, torch.stack([self.y[b[i][0]+j, b[i][1]] for j in range(batch_time)], dim=0)[:,None,:]),
+                        dim=1)
+            return t_batch, y0_batch, y_batch
 
     
     def get_eval(self, T, n=6, d=10):
@@ -268,6 +276,8 @@ class ODE(nn.Module):
         else:
             if ntype == 'mod':
                 y = np.mod(y, 2*np.pi) - np.pi
+            if ntype == 'symmod':
+                y = np.sign(y)*np.mod(np.abs(y), 2*np.pi)
             cmap, norm = self._color(y, ntype, vmin, vmax)
             sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
 
@@ -288,9 +298,9 @@ class ODE(nn.Module):
             return sm
             
         
-    def plot_series(self, y, ntype=None, vmin=None, vmax=None, clabel=None):
+    def plot_series(self, y, ntype=None, vmin=None, vmax=None, clabel=None, colors=None):
         r"""Plot a time series of frames of an ODE solution.
-        
+
         Parameters
         ----------
         y : ``torch.tensor``
@@ -299,10 +309,10 @@ class ODE(nn.Module):
             (only valid for ``ntype = none``).
             Alternately, ``y`` can be a list of 2 solution tensors, which will then be overlaid
             (only valid for ``ntype = none``).
-            
+
         ntype : str
             Type of normalization to apply when displaying the image. The options are:
-            
+
             - ``none`` -- No normalization; point cloud data
             - ``sym`` -- Symmetric linear normalization scale
             - ``unit`` -- Linear normalization between 0 and 1
@@ -310,58 +320,64 @@ class ODE(nn.Module):
             - ``log`` -- Logarithmic normalization scale
             - ``symlog`` -- Symmetric logarithmic normalization scale
             - ``None`` -- Linear normalization between the min. and max. values of ``y``
-            
+
             The default is ``None``.     
-        
+
         vmin : float, optional
             Minimum normalization value.    
-        
+
         vmax : float, optional
             Maximum normalization value.
-        
+
         clabel : str, optional
             Text used to label the colorbar.
-            
+
         """
         if ntype == 'none':
             n = 6
             fig, ax = plt.subplots(1, n, figsize=(3*n,3), sharey=True)
-            
-            k = isinstance(y, list)
-            if k: y0, y = y[0].cpu(), y[1].cpu()
-            else: y0 = y.cpu()
-            
-            step = y.shape[0]//n
-            for i in range(n):
-                circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y0[k*i*step]]
-                c = mpl.collections.PatchCollection(circles, lw=0, color='#D0D0D0')
-                ax[i].add_collection(c)
 
-                circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in y[i*step]]
-                c = mpl.collections.PatchCollection(circles, lw=0, color='#527C9C')
-                ax[i].add_collection(c)
+            if isinstance(y, list):
+                y = [k.cpu() for k in y]
+                colors = ['#527C9C', '#CCA447']
+            else:
+                y = [y.cpu()]
+                colors = [colors if colors else '#527C9C']
+
+            step = y[0].shape[0]//n
+            for i in range(n):
+
+                for k, _y in enumerate(y):
+                    circles = [plt.Circle((xi,yi), radius=self.R) for xi,yi in _y[i*step]]
+                    c = mpl.collections.PatchCollection(circles, lw=0, color=colors[k])
+                    ax[i].add_collection(c)
 
                 ax[i].set_xticks([])
                 ax[i].set_yticks([])
                 ax[i].set_xlim([-self.L, self.L])
                 ax[i].set_ylim([-self.L, self.L])
-            
+
         else:
             if isinstance(y, list):
                 y = [k.cpu() for k in y]
             else:
                 y = [y.cpu()]
                 ntype = [ntype]
-            
+
             n = 6
             fig, ax = plt.subplots(len(y), n + 1, figsize=(3*n,3*len(y)), gridspec_kw={'width_ratios': n*[1] + [0.07]})
             if len(y) == 1: ax = ax[None,:]
-            
+
             sm = []
             for k in range(len(y)):
                 if ntype[k] == 'mod':
                     y[k] = np.mod(y[k], 2*np.pi) - np.pi
-                cmap, norm = self._color(y[k], ntype[k], vmin, vmax)
+                if ntype[k] == 'symmod':
+                    y[k] = np.sign(y[k])*np.mod(np.abs(y[k]), 2*np.pi)
+                if (ntype[k] == 'sym') and vmin and vmax:
+                    cmap, norm = self._color(y[k], ntype[k], -(vmax - vmin), vmax - vmin)
+                else:
+                    cmap, norm = self._color(y[k], ntype[k], vmin, vmax)
                 sm.append(mpl.cm.ScalarMappable(cmap=cmap, norm=norm))
 
                 step = y[k].shape[0]//n
@@ -377,13 +393,21 @@ class ODE(nn.Module):
                     plt.colorbar(sm[k], cax=ax[k,-1], ticks=[-np.pi, 0, np.pi])
                     format_axis(ax[k,-1], props, xlabel='', ylabel=clabel)
                     ax[k,-1].set_yticklabels([r'$-\pi$', '0', r'$\pi$'])
+                elif ntype[k] == 'symmod':
+                    plt.colorbar(sm[k], cax=ax[k,-1], ticks=[-2*np.pi, 0, 2*np.pi])
+                    format_axis(ax[k,-1], props, xlabel='', ylabel=clabel)
+                    ax[k,-1].set_yticklabels([r'$-2\pi$', '0', r'$2\pi$'])
                 else:
-                    plt.colorbar(sm[k], cax=ax[k,-1])
-                    format_axis(ax[k,-1], props, xlabel='', ylabel=clabel, ybins=4)
-                
+                    if ntype[k] == 'symlog':
+                        plt.colorbar(sm[k], cax=ax[k,-1], ticks=[-vmax,-vmin,0,vmin,vmax])
+                        format_axis(ax[k,-1], props, xlabel='', ylabel=clabel)
+                    else:
+                        plt.colorbar(sm[k], cax=ax[k,-1])
+                        format_axis(ax[k,-1], props, xlabel='', ylabel=clabel, ybins=5)
+
         fig.tight_layout()
         fig.subplots_adjust(wspace=0.1, hspace=0.1)
-            
+
         return fig
     
 
@@ -462,8 +486,8 @@ class Kuramoto(ODE):
                 
         """
         torch.manual_seed(seed)
-        self.y0 = nn.Parameter(2*np.pi*torch.rand((M, 1, self.N, self.N),
-                                                  dtype=self.default_type).flatten(start_dim=-2), requires_grad=False)
+        y0 = 2*np.pi*torch.rand((M, 1, self.N, self.N), dtype=self.default_type)
+        self.y0 = nn.Parameter(y0.flatten(start_dim=-2), requires_grad=False)
     
     
     def forward(self, t, y):
@@ -472,7 +496,7 @@ class Kuramoto(ODE):
         Parameters
         ----------
         t : ``torch.tensor``
-            1-dimensional tensor of the evaluation time point.
+            1-dimensional tensor of the evaluation time points.
         
         y : ``torch.tensor`` of shape ``(M,1,D)``
             State of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
@@ -565,8 +589,8 @@ class Kuramoto3D(ODE):
                 
         """
         torch.manual_seed(seed)
-        self.y0 = nn.Parameter(2*np.pi*torch.rand((M, 1, self.N, self.N, self.N),
-                                                  dtype=self.default_type).flatten(start_dim=-3), requires_grad=False)
+        y0 = 2*np.pi*torch.rand((M, 1, self.N, self.N, self.N), dtype=self.default_type)
+        self.y0 = nn.Parameter(dy.flatten(start_dim=-3), requires_grad=False)
     
     
     def forward(self, t, y):
@@ -575,7 +599,7 @@ class Kuramoto3D(ODE):
         Parameters
         ----------
         t : ``torch.tensor``
-            1-dimensional tensor of the evaluation time point.
+            1-dimensional tensor of the evaluation time points.
         
         y : ``torch.tensor`` of shape ``(M,1,D)``
             State of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
@@ -690,6 +714,20 @@ class GrayScott(ODE):
     
     
     def init_solve(self, t):
+        r"""Solve the ODE system with initial inflow and depletion rates and set the solution as the new initial condition.
+            
+        Parameters
+        ----------
+        t : ``torch.tensor``
+            1-dimensional tensor of the evaluation time points. The last time point will be used for the initial condition.
+                
+        Attributes
+        ----------
+        y0 : ``torch.tensor`` of shape ``(M,2,D)``
+            Initial state of the system for ``M`` initial conditions and 2 concentrations (`u` and `v`).
+            ``D`` denotes the flattened system size.
+                
+        """
         device = self.y0.device
         f, k = self.f, self.k
         self.f, self.k = self.f0, self.k0
@@ -707,7 +745,7 @@ class GrayScott(ODE):
         Parameters
         ----------
         t : ``torch.tensor``
-            1-dimensional tensor of the evaluation time point.
+            1-dimensional tensor of the evaluation time points.
         
         y : ``torch.tensor`` of shape ``(M,2,D)``
             State of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
@@ -816,6 +854,20 @@ class Turing(ODE):
         
     
     def init_solve(self, t, rtol=1e-7, atol=1e-9):
+        r"""Solve the ODE system with initial saturation constant and set the solution as the new initial condition.
+            
+        Parameters
+        ----------
+        t : ``torch.tensor``
+            1-dimensional tensor of the evaluation time points. The last time point will be used for the initial condition.
+                
+        Attributes
+        ----------
+        y0 : ``torch.tensor`` of shape ``(M,2,D)``
+            Initial state of the system for ``M`` initial conditions and 2 concentrations (`u` and `v`).
+            ``D`` denotes the flattened system size.
+                
+        """
         device = self.y0.device
         k = self.k
         self.k = self.k0
@@ -833,7 +885,7 @@ class Turing(ODE):
         Parameters
         ----------
         t : ``torch.tensor``
-            1-dimensional tensor of the evaluation time point.
+            1-dimensional tensor of the evaluation time points.
         
         y : ``torch.tensor`` of shape ``(M,2,D)``
             State of the system for ``M`` initial conditions. ``D`` denotes the flattened system size.
@@ -923,7 +975,7 @@ class LotkaVolterra(ODE):
         Parameters
         ----------
         t : ``torch.tensor``
-            1-dimensional tensor of the evaluation time point.
+            1-dimensional tensor of the evaluation time points.
         
         y : ``torch.tensor`` of shape ``(M,N,2)``
             State of the system for ``M`` initial conditions.
@@ -970,7 +1022,7 @@ class ODEGraph(MessagePassing):
         
     """ 
     def __init__(self, method='dopri5', adjoint=False, requires_grad=True, default_type=torch.float64):
-        super(ODEGraph, self).__init__(aggr='mean')
+        super(ODEGraph, self).__init__(aggr='add')
         
         self.method = method
         self.adjoint = adjoint if requires_grad else False
@@ -1115,24 +1167,48 @@ class ODEGraph(MessagePassing):
             
         """
         T, M, _, D = self.y.shape
-        t_batch = self.t[:batch_time]
+        if batch_time == T:
+            b = np.random.choice(M, batch_size, replace=False)
+            return self.t[:], self.y0[b], self.y[:,b]
+        
+        else:
+            t_batch = self.t[:batch_time]
 
-        c = [[i,j] for i in range(T - batch_time) for j in range(M)]
-        b = [c[i] for i in np.random.choice(len(c), batch_size, replace=False)]
+            c = [[i,j] for i in range(T - batch_time) for j in range(M)]
+            b = [c[i] for i in np.random.choice(len(c), batch_size, replace=False)]
 
-        for i in range(len(b)):
-            if i==0:
-                y0_batch = self.y[b[i][0], b[i][1]][None,:]
-                y_batch = torch.stack([self.y[b[i][0]+j, b[i][1]] for j in range(batch_time)], dim=0)[:,None,:]
-            else:
-                y0_batch = torch.cat((y0_batch, self.y[b[i][0], b[i][1]][None,:]))
-                y_batch = torch.cat(
-                    (y_batch, torch.stack([self.y[b[i][0]+j, b[i][1]] for j in range(batch_time)], dim=0)[:,None,:]),
-                    dim=1)
-        return t_batch, y0_batch, y_batch
+            for i in range(len(b)):
+                if i==0:
+                    y0_batch = self.y[b[i][0], b[i][1]][None,:]
+                    y_batch = torch.stack([self.y[b[i][0]+j, b[i][1]] for j in range(batch_time)], dim=0)[:,None,:]
+                else:
+                    y0_batch = torch.cat((y0_batch, self.y[b[i][0], b[i][1]][None,:]))
+                    y_batch = torch.cat(
+                        (y_batch, torch.stack([self.y[b[i][0]+j, b[i][1]] for j in range(batch_time)], dim=0)[:,None,:]),
+                        dim=1)
+            return t_batch, y0_batch, y_batch
     
     
     def get_eval(self, T, n=6, d=10):
+        r"""Get an array of logarithmically spaced evaluation time points.
+        
+        Parameters
+        ----------
+        T : int
+            Maximum time.
+
+        n : int
+            Number of time points. Default is 6.
+            
+        d : int
+            All time points will be rounded to the nearest ``d``. Default is 10.
+
+        Returns
+        -------
+        t : ``numpy.array`` of shape ``(n)``
+            Numpy array of ``n`` time points.
+            
+        """
         t = np.ceil(np.logspace(0, np.log10(T), n)).astype(int) - 1
         t = (d*np.ceil(t/float(d))).astype(int)
         t[-1] -= d*(t[-1] >= T)
@@ -1189,7 +1265,11 @@ class ODEGraph(MessagePassing):
             
         """
         y = y.cpu()
-        if ntype == 'mod':
+        if y.shape[-1] <= 4:
+            ax.set_xlim([-self.L/2., self.L/2.])
+            ax.set_ylim([-self.L/2., self.L/2.])
+            scale = ax.transData.get_matrix().ravel()[0]
+            
             c = np.mod(y[...,-1], 2*np.pi) - np.pi
             cmap, norm = self._color(c, ntype)
             colors = cmap(norm(c))
@@ -1197,18 +1277,18 @@ class ODEGraph(MessagePassing):
             
             try: ax.set_zticks([])
             except:
-                ax.scatter(*y[:,:2].T, color=colors, s=10)
+                ax.scatter(*y[:,:2].T, color=colors, s=(scale*self.R)**2)
             else: 
-                ax.scatter(*y[:,:3].T, color=colors, s=10)
+                ax.scatter(*y[:,:3].T, color=colors, s=(scale*self.R)**2)
                 ax.set_zlim([-self.L/2., self.L/2.])
                 ax.view_init(elev=60, azim=45)
             
             ax.set_xticks([])
             ax.set_yticks([])
-            ax.set_xlim([-self.L/2., self.L/2.])
-            ax.set_ylim([-self.L/2., self.L/2.])
         
         else:
+            if ntype == 'mod':
+                y = np.mod(y, 2*np.pi) - np.pi
             cmap, norm = self._color(y, ntype, vmin, vmax)
             sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
 
@@ -1295,14 +1375,19 @@ class ODEGraph(MessagePassing):
                 ax[i].set_xlim(-1,1)
                 ax[i].set_ylim(-1,1)
                 ax[i].axis('off')
-
-            plt.colorbar(sm, cax=ax[-1])
-            format_axis(ax[-1], props, xlabel='', ylabel=clabel, ybins=4)
+            
+            if ntype == 'symlog':
+                plt.colorbar(sm, cax=ax[-1], ticks=[-vmax,-vmin,0,vmin,vmax])
+                format_axis(ax[-1], props, xlabel='', ylabel=clabel)
+            else:
+                plt.colorbar(sm, cax=ax[-1])
+                format_axis(ax[-1], props, xlabel='', ylabel=clabel, ybins=5)
+                
             fig.tight_layout()
             fig.subplots_adjust(wspace=0.1)
             
         return fig
-    
+        
     
     def forward(self, x, edge_index):
         r"""Update node embeddings ``x`` as specified by the ``message``.
@@ -1365,16 +1450,35 @@ class Swarm(ODEGraph):
                         'R': 0.05,
                         'J': 1.,
                         'K': -0.5,
-                        'rc': 2.,
+                        'rc': 1.,
                         'Nc': 100,
+                        'fc': None
                        }
         
         for k, v in default_args.items():
             setattr(self, k, args[k] if k in args else v)
         
-        self.gx = self._init_graph(self.rc, self.Nc) 
-        self.f = lambda x, a: (x, torch.sin(a), torch.cos(a))
+        self.z = (2./self.L)**2
+        self.gx = self._init_graph(self.rc, self.Nc)
+        self.basis = lambda x, a: (x, torch.sin(a), torch.cos(a))
         
+        if (self.fc == None) or (self.fc == 'tanh'):
+            self._potential = self._potential_tanh
+        elif self.fc == 'exp':
+            self._potential = self._potential_exp
+        else:
+            self._potential = self.fc
+            
+    
+    def _potential_exp(self, x, r):
+        def h(y):
+            return torch.exp(y)*y**2
+        return r/x*h((x <= r)*r/(x - r))
+        
+        
+    def _potential_tanh(self, x, r):
+        return r/x*(x <= r)*0.5*(1 + torch.tanh(1./(x - r) - 1./(x - 2*r)))
+    
     
     def init_state(self, M=1, seed=12):
         r"""Randomly generate the initial state(s) of the ODE system.
@@ -1395,26 +1499,30 @@ class Swarm(ODEGraph):
         """
         torch.manual_seed(seed)
         
-        a = 2*np.pi*torch.rand(size=(M, self.N), dtype=self.default_type) - np.pi
+        if (self.J == 0) and (self.K == 0):
+            a = torch.zeros(size=(M, self.N), dtype=self.default_type)
+        else:
+            a = 2*np.pi*torch.rand(size=(M, self.N), dtype=self.default_type) - np.pi
+            
         phi = 2*np.pi*torch.rand(size=(M, self.N), dtype=self.default_type)
         r = (torch.rand(size=(M, self.N), dtype=self.default_type))**(1./self.D)
-        r *= self.L/4. # Note: Set to L/4 because system expands
+        r *= self.L/2.
         
         if self.D == 2:
             x = r*torch.cos(phi)
             y = r*torch.sin(phi)
-            self.y0 = torch.stack([x, y, a], dim=-1)
+            self.y0 = nn.Parameter(torch.stack([x, y, a], dim=-1), requires_grad=False)
             
         else:
             th = torch.acos(2*torch.rand(size=(M, self.N), dtype=self.default_type) - 1.)
             x = r*torch.sin(th)*torch.cos(phi)
             y = r*torch.sin(th)*torch.sin(phi)
             z = r*torch.cos(th)
-            self.y0 = torch.stack([x, y, z, a], dim=-1)
+            self.y0 = nn.Parameter(torch.stack([x, y, z, a], dim=-1), requires_grad=False)
 
     
-    def distance(self, x, r=1.):
-        r"""Distance metric used to specify interaction potential.
+    def potential(self, x, r=1.):
+        r"""Smooth cutoff potential used to specify spatial interaction.
             
         Parameters
         ----------
@@ -1427,13 +1535,11 @@ class Swarm(ODEGraph):
         Returns
         -------
         d : ``torch.tensor``
-            Distance metric for each ``x``.
+            Cutoff potential at each ``x``.
                 
         """
-        def h(y):
-            return torch.exp(y)*y**2
-        return r/x*h((x <= r)*r/(x - r))
-        
+        return self._potential(x, r)
+
         
     def message(self, x_i, x_j):
         r"""Construct the message to node ``i`` from each neighboring node ``j``.
@@ -1453,13 +1559,12 @@ class Swarm(ODEGraph):
                 
         """
         y_ij = x_j - x_i
-        x_ij, sint_ij, cost_ij = self.f(*y_ij.split([self.D,1], dim=-1))
+        x_ij, sint_ij, cost_ij = self.basis(*y_ij.split([self.D,1], dim=-1))
         r_ij = torch.sqrt(torch.bmm(x_ij.view(-1,1,self.D), x_ij.view(-1,self.D,1))).squeeze(-1)
 
         #d = 1./r_ij
-        d = self.distance(r_ij, self.rc)
-        m_ij = torch.cat((d*x_ij*(1. + self.J*cost_ij - d**(self.D - 1)),
-                          d*self.K*sint_ij), dim=-1)
+        d = self.potential(r_ij, self.rc)
+        m_ij = self.z*torch.cat((d*x_ij*(1. + self.J*cost_ij - d**(self.D - 1)), d*self.K*sint_ij), dim=-1)
         return m_ij
     
     
@@ -1471,7 +1576,7 @@ class Swarm(ODEGraph):
         Parameters
         ----------
         t : ``torch.tensor``
-            1-dimensional tensor of the evaluation time point.
+            1-dimensional tensor of the evaluation time points.
         
         y : ``torch.tensor`` of shape ``(M,N,D)``
             State of the system for ``M`` initial conditions.

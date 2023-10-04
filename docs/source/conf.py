@@ -62,7 +62,6 @@ def setup(app):
 	from dynamicxs import ode, cxs
 	ode.ODE.__name__ = 'ODE'
 	ode.Kuramoto.__name__ = 'Kuramoto'
-	ode.GrayScott.__name__ = 'GrayScott'
 	ode.LotkaVolterra.__name__ = 'LotkaVolterra'
 	sys.modules['ode'] = ode
 
