@@ -53,7 +53,7 @@ sys.path.insert(0, os.path.abspath('./../..'))
 
 # to display docs when using imported packages
 def setup(app):
-	from dynamicxs import ode, cxs, display, utils
+	from dynamicxs import ode, cxs
     
 	ode.ODE.__name__ = 'ODE'
 	ode.Kuramoto.__name__ = 'Kuramoto'
