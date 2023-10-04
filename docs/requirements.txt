@@ -1,3 +1,7 @@
 ipykernel
 nbsphinx
 torch
+numpy
+matplotlib
+matplotlib.pyplot
+torchdiffeq
