@@ -1,6 +1,8 @@
 ipykernel
 nbsphinx
-torch
 numpy
 matplotlib
+torch
 torchdiffeq
+torch_geometric
+skimage
