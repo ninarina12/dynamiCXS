@@ -6,3 +6,4 @@ torch
 torchdiffeq
 torch_geometric
 scikit-image
+mock
