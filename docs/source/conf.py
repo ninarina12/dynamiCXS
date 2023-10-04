@@ -53,12 +53,12 @@ sys.path.insert(0, os.path.abspath('./../..'))
 
 # to display docs when using imported packages
 def setup(app):
-	import mock
+	#import mock
 	
-	MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'skimage.data', 'torchdiffeq', 'display', 'utils']
+	#MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot', 'torchdiffeq', 'display', 'utils']
 	
-	sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
-
+	#sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
+    import numpy, matplotlib, matplotlib.pyplot, torchdiffeq, display, utils
 	from dynamicxs import ode, cxs
 	ode.ODE.__name__ = 'ODE'
 	ode.Kuramoto.__name__ = 'Kuramoto'
