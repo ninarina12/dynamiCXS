@@ -8,7 +8,10 @@ Data-driven discovery of dynamics from time-resolved coherent X-ray scattering
     :scale: 100%
     :target: https://dynamicxs.readthedocs.io/en/latest
     
-    
+
+Overview
+##################
+
 This repository contains supporting code for the work, "Data-driven discovery of dynamics from time-resolved coherent X-ray scattering" by Nina Andrejevic, *et al*.
 
 The ``ode.py`` module contains classes for defining and solving systems of ordinary differential equations (ODEs) using ``PyTorch`` tensors and the ``torchdiffeq`` library of ODE solvers for numerical integration. Implementations of the systems reported in this work are provided as examples.
@@ -18,18 +21,16 @@ The ``cxs.py`` module contains classes for computing coherent speckle patterns f
 We have also included Jupyter notebooks to reproduce the results of the three computational case studies reported in the work, which are also recommended as a starting point for adapting the code to new dynamical systems.
 
 Simulated examples
-##################
-Locally-coupled moments
-***********************
-.. figure:: images/kuramoto_results.gif
-    :width: 400
-
-Self-organizing particles
-*************************
-.. figure:: images/swarm_results.gif
-    :width: 400
-
-Fluctuating source
 ******************
+
+**Locally-coupled moments**
+.. figure:: images/kuramoto_results.gif
+    :width: 500
+
+**Self-organizing particles**
+.. figure:: images/swarm_results.gif
+    :width: 500
+
+**Fluctuating source**
 .. figure:: images/lotka_results.gif
-    :width: 400
+    :width: 500
