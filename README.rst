@@ -24,13 +24,16 @@ Simulated examples
 ******************
 
 **Locally-coupled moments**
+
 .. figure:: images/kuramoto_results.gif
     :width: 500
 
 **Self-organizing particles**
+
 .. figure:: images/swarm_results.gif
     :width: 500
 
 **Fluctuating source**
+
 .. figure:: images/lotka_results.gif
     :width: 500
