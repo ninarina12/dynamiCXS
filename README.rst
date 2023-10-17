@@ -2,6 +2,8 @@ Data-driven discovery of dynamics from time-resolved coherent X-ray scattering
 ==============================================================================
 |docs|
 
+Overview
+########
 
 .. |docs| image:: https://readthedocs.org/projects/docs/badge/?version=latest
     :alt: Documentation Status
