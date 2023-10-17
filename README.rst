@@ -19,21 +19,17 @@ We have also included Jupyter notebooks to reproduce the results of the three co
 
 Simulated examples
 ##################
-
 Locally-coupled moments
 ***********************
-
 .. figure:: images/kuramoto_results.gif
     :width: 400
 
 Self-organizing particles
 *************************
-
 .. figure:: images/swarm_results.gif
     :width: 400
 
 Fluctuating source
 ******************
-
 .. figure:: images/lotka_results.gif
     :width: 400
