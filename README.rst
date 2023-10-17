@@ -7,10 +7,6 @@ Data-driven discovery of dynamics from time-resolved coherent X-ray scattering
     :alt: Documentation Status
     :scale: 100%
     :target: https://dynamicxs.readthedocs.io/en/latest
-    
-
-Overview
-##################
 
 This repository contains supporting code for the work, "Data-driven discovery of dynamics from time-resolved coherent X-ray scattering" by Nina Andrejevic, *et al*.
 
@@ -26,14 +22,14 @@ Simulated examples
 **Locally-coupled moments**
 
 .. figure:: images/kuramoto_results.gif
-    :width: 500
+    :width: 400
 
 **Self-organizing particles**
 
 .. figure:: images/swarm_results.gif
-    :width: 500
+    :width: 400
 
 **Fluctuating source**
 
 .. figure:: images/lotka_results.gif
-    :width: 500
+    :width: 400
