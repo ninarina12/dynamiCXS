@@ -16,3 +16,5 @@ The ``ode.py`` module contains classes for defining and solving systems of ordin
 The ``cxs.py`` module contains classes for computing coherent speckle patterns from objects defined either on a grid or as point clouds and is also implemented using `PyTorch` tensors.
 
 We have also included Jupyter notebooks to reproduce the results of the three computational case studies reported in the work, which are also recommended as a starting point for adapting the code to new dynamical systems.
+
+.. figure:: images/kuramoto_results.gif
