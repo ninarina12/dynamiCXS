@@ -18,3 +18,10 @@ The ``cxs.py`` module contains classes for computing coherent speckle patterns f
 We have also included Jupyter notebooks to reproduce the results of the three computational case studies reported in the work, which are also recommended as a starting point for adapting the code to new dynamical systems.
 
 .. figure:: images/kuramoto_results.gif
+    :width: 400
+    
+.. figure:: images/swarm_results.gif
+    :width: 400
+    
+.. figure:: images/lotka_results.gif
+    :width: 400
