@@ -2,9 +2,6 @@ Data-driven discovery of dynamics from time-resolved coherent X-ray scattering
 ==============================================================================
 |docs|
 
-Overview
-########
-
 .. |docs| image:: https://readthedocs.org/projects/docs/badge/?version=latest
     :alt: Documentation Status
     :scale: 100%
@@ -16,22 +13,22 @@ The ``ode.py`` module contains classes for defining and solving systems of ordin
 
 The ``cxs.py`` module contains classes for computing coherent speckle patterns from objects defined either on a grid or as point clouds and is also implemented using `PyTorch` tensors.
 
-We have also included Jupyter notebooks to reproduce the results of the three computational case studies reported in the work, which are also recommended as a starting point for adapting the code to new dynamical systems.
-
-Simulated examples
-******************
+We have also included Jupyter notebooks to reproduce the results of the three computational case studies reported in the work, which are also recommended as a starting point for adapting the code to new dynamical systems. Please refer to ``requirements.txt`` for python package dependencies. Visualizations of the simulated and predicted dynamics in real and reciprocal space for the three computational examples are shown below. Please see the manuscript for additional details.
 
 **Locally-coupled moments**
+Learning the coupling kernel governing a two-dimensional lattice of locally-interacting moments evolving in time according to the Kuramoto model:
 
 .. figure:: images/kuramoto_results.gif
     :width: 400
 
 **Self-organizing particles**
+Learning clustering dynamics in a collection of interacting particles with an unknown interaction potential:
 
 .. figure:: images/swarm_results.gif
     :width: 400
 
 **Fluctuating source**
+Learning the dynamics of a periodic, fluctuating source from observations of a random test pattern:
 
 .. figure:: images/lotka_results.gif
     :width: 400

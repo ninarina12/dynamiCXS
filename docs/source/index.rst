@@ -1,5 +1,5 @@
-Data-driven discovery of dynamical equations from coherent X-ray scattering
-===========================================================================
+Data-driven discovery of dynamics from time-resolved coherent X-ray scattering
+==============================================================================
 
 .. note::
 
