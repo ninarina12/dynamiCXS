@@ -17,12 +17,12 @@ We have also included Jupyter notebooks to reproduce the results of the three co
 
 .. figure:: images/kuramoto_results.gif
     :width: 400
-**Figure 1: Locally-coupled moments** Learning the coupling kernel governing a two-dimensional lattice of locally-interacting moments evolving in time according to the Kuramoto model.
+**Figure 1: Locally-coupled moments |** Learning the coupling kernel governing a two-dimensional lattice of locally-interacting moments evolving in time according to the Kuramoto model.
 
 .. figure:: images/swarm_results.gif
     :width: 400
-**Figure 2: Self-organizing particles** Learning clustering dynamics in a collection of interacting particles with an unknown interaction potential.
+**Figure 2: Self-organizing particles |** Learning clustering dynamics in a collection of interacting particles with an unknown interaction potential.
 
 .. figure:: images/lotka_results.gif
     :width: 400
-**Figure 3: Fluctuating source** Learning the dynamics of a periodic, fluctuating source from observations of a random test pattern.
+**Figure 3: Fluctuating source |** Learning the dynamics of a periodic, fluctuating source from observations of a random test pattern.
