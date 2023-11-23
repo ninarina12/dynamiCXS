@@ -26,5 +26,5 @@ Under the ``dynamicxs/systems`` directory, we have included Jupyter notebooks to
 **Fluctuating source  |**  Learning the dynamics of a periodic, fluctuating source from observations of a random test pattern.
 
 .. figure:: images/traj_results.gif
-    :width: 800
-**Ptychographic scan  |**  Learning the probe trajectory during a ptychographic scan.
+    :width: 900
+**Ptychographic scan  |**  Learning the probe trajectory during a ptychographic scan. Blue markers denote inference within the time window seen during training; pink markers denote inference beyond the time window seen during training.
