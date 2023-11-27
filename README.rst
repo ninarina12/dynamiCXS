@@ -2,10 +2,9 @@ Data-driven discovery of dynamics from time-resolved coherent scattering
 ==============================================================================
 |docs| |doi|
 
-.. |docs| image:: https://readthedocs.org/projects/docs/badge/?version=latest
+.. |docs| image:: https://readthedocs.org/projects/dynamicxs/badge/?version=latest
+    :target: https://dynamicxs.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
-    :scale: 100%
-    :target: https://dynamicxs.readthedocs.io/en/latest
 
 .. |doi| image:: https://zenodo.org/badge/595875458.svg
     :target: https://zenodo.org/doi/10.5281/zenodo.10211195
