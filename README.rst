@@ -1,12 +1,15 @@
 Data-driven discovery of dynamics from time-resolved coherent scattering
 ==============================================================================
-|docs|
+|docs| |doi|
 
 .. |docs| image:: https://readthedocs.org/projects/docs/badge/?version=latest
     :alt: Documentation Status
     :scale: 100%
     :target: https://dynamicxs.readthedocs.io/en/latest
 
+.. |doi| image:: https://zenodo.org/badge/595875458.svg
+    :target: https://zenodo.org/doi/10.5281/zenodo.10211195
+  
 This repository contains supporting code for the work, `"Data-driven discovery of dynamics from time-resolved coherent scattering" <https://arxiv.org/abs/2311.14196>`_ by Nina Andrejevic, *et al*.
 
 The ``ode.py`` module contains classes for defining and solving systems of ordinary differential equations (ODEs) using ``PyTorch`` tensors and the ``torchdiffeq`` library of ODE solvers for numerical integration. Implementations of the systems reported in this work are provided as examples. The ``cxs.py`` module contains classes for computing coherent speckle patterns from objects defined either on a grid or as point clouds and is also implemented using `PyTorch` tensors.
