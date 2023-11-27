@@ -1,5 +1,5 @@
-Data-driven discovery of dynamics from time-resolved coherent X-ray scattering
-==============================================================================
+Data-driven discovery of dynamics from time-resolved coherent scattering
+========================================================================
 
 .. note::
 
