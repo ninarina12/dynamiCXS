@@ -7,11 +7,11 @@ Data-driven discovery of dynamics from time-resolved coherent scattering
     :scale: 100%
     :target: https://dynamicxs.readthedocs.io/en/latest
 
-This repository contains supporting code for the work, `"Data-driven discovery of dynamics from time-resolved coherent X-ray scattering" <https://arxiv.org/abs/2311.14196>`_ by Nina Andrejevic, *et al*.
+This repository contains supporting code for the work, `"Data-driven discovery of dynamics from time-resolved coherent scattering" <https://arxiv.org/abs/2311.14196>`_ by Nina Andrejevic, *et al*.
 
 The ``ode.py`` module contains classes for defining and solving systems of ordinary differential equations (ODEs) using ``PyTorch`` tensors and the ``torchdiffeq`` library of ODE solvers for numerical integration. Implementations of the systems reported in this work are provided as examples. The ``cxs.py`` module contains classes for computing coherent speckle patterns from objects defined either on a grid or as point clouds and is also implemented using `PyTorch` tensors.
 
-Under the ``dynamicxs/systems`` directory, we have included Jupyter notebooks to reproduce the results of the three computational case studies and experimental proof-of-concept reported in the work, which are also recommended as a starting point for adapting the code to new dynamical systems. Please refer to ``requirements.txt`` for python package dependencies. Visualizations of the true and predicted dynamics in real and reciprocal space for these examples are shown below. Please see the manuscript for additional details.
+Under the ``dynamicxs/systems`` directory, we have included Jupyter notebooks to reproduce the results of the three computational case studies and experimental proof-of-concept reported in the work. Corresponding datasets for the experimental example are available `here <https://zenodo.org/doi/10.5281/zenodo.10204976>`_. Please refer to ``requirements.txt`` for python package dependencies. Visualizations of the true and predicted dynamics in real and reciprocal space for these examples are shown below. Please see the manuscript for additional details.
 
 .. figure:: images/kuramoto_results.gif
     :width: 400
