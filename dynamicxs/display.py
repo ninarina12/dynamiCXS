@@ -43,3 +43,12 @@ def format_str(x):
         return str(x)
     else:
         return ''
+    
+    
+def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
+    '''
+    Adapted from: https://gist.github.com/salotz/4f585aac1adb6b14305c
+    '''
+    new_cmap = mpl.colors.LinearSegmentedColormap.from_list('trunc({n},{a:.2f},{b:.2f})'.format(
+        n=cmap.name, a=minval, b=maxval), cmap(np.linspace(minval, maxval, n)))
+    return new_cmap

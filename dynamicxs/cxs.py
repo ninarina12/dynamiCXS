@@ -89,8 +89,8 @@ class CXS(nn.Module):
             k = 2*int(np.ceil(np.sqrt(-2*np.log(tol)/(r_probe**2))/(self.q.max() - self.q.min())*self.n)//2)
             k += 1 - self.n%2
             probe = self.center_crop(probe, k)
-            self.probe = nn.Conv2d(1, 1, n, bias=False, padding='same', padding_mode='zeros')
-            self.probe.weight = nn.Parameter(probe/probe.max(), requires_grad=False)
+            self.probe = nn.Conv2d(1, 1, k, bias=False, padding='same', padding_mode='zeros')
+            self.probe.weight = nn.Parameter(probe/probe.max(), requires_grad=False) # sum or max normalize the probe?
             
         else:
             self.probe = nn.Conv2d(1, 1, 1, bias=False, padding='same', padding_mode='zeros')
@@ -126,7 +126,7 @@ class CXS(nn.Module):
         return y[..., l//2 - k//2 + s:l//2 + k//2 + k%2 + s, l//2 - k//2 + s:l//2 + k//2 + k%2 + s]
     
     
-    def plot_probe(self, ax):
+    def plot_probe(self, ax, ec='white'):
         r"""Plot the real and, optionally, reciprocal space views of the probe.
             
         Parameters
@@ -149,7 +149,7 @@ class CXS(nn.Module):
         probe /= probe.max()
         
         circles = [plt.Circle((0,0), radius=k*f_probe*self.L) for k in range(1,2)]
-        c = mpl.collections.PatchCollection(circles, fc='none', ec='white', ls='dashed')
+        c = mpl.collections.PatchCollection(circles, fc='none', ec=ec, ls='dashed', lw=1.2)
             
         sm = []
         try: len(ax)
@@ -357,10 +357,11 @@ class CXSGrid(CXS):
         Convolution operator for convolving the reciprocal space pattern with the probe.
         
     """
-    def __init__(self, N, n, L=1., dq=1., f_probe=None, f_mask=None, f=None, w=None, c=None):
+    def __init__(self, N, n, L=1., dq=1., f_probe=None, f_mask=None, f=None, w=None, c=None, k=0):
         super(CXSGrid, self).__init__(n, L, dq, f_probe, f_mask)
         
         self.N = N
+        self.k = k
         
         # Real-space grid
         x = torch.arange(-L/2., L/2., L/N)
@@ -395,7 +396,9 @@ class CXSGrid(CXS):
             Form factor evaluated at each point in ``y``.
                 
         """
-        return torch.cos(y)
+        cosy = torch.cos(y)
+        siny = torch.sin(y)
+        return (1 - self.k)*cosy + self.k*(siny**3 + cosy**3)
     
     
     def f_none(self, y):
@@ -554,25 +557,8 @@ class CXSPoint(CXS):
         else: self.c = [1.,0.1]
             
     
-    def f_phase(self, y):
-        r"""Orientation-dependent form factor.
-            
-        Parameters
-        ----------
-        y : ``torch.tensor``
-            Tensor of phases at which to evaluate the form factor.
-                
-        Returns
-        -------
-        f : ``torch.tensor`` of shape ``y.shape``
-            Form factor evaluated at each point in ``y``.
-                
-        """
-        return torch.cos(y)
-    
-    
-    def f_sphere(self, q, R):
-        r"""Form factor of a sphere.
+    def _f_sphere(self, q, R):
+        r"""Form factor amplitude of a sphere.
             
         Parameters
         ----------
@@ -591,10 +577,82 @@ class CXSPoint(CXS):
         V = 4./3.*np.pi*R**3
         f = V*torch.ones_like(q)
         f[q > 0.] = V*3*(torch.sin(q[q > 0.]*R) - q[q > 0.]*R*torch.cos(q[q > 0.]*R))/(q[q > 0.]*R)**3
+        return f
+    
+        
+    def f_phase(self, y):
+        r"""Orientation-dependent form factor.
+            
+        Parameters
+        ----------
+        y : ``torch.tensor``
+            Tensor of phases at which to evaluate the form factor.
+                
+        Returns
+        -------
+        f : ``torch.tensor`` of shape ``y.shape``
+            Form factor evaluated at each point in ``y``.
+                
+        """
+        return torch.cos(y)
+    
+    
+    def f_sphere(self, q, R):
+        r"""Normalized form factor of a sphere.
+            
+        Parameters
+        ----------
+        q : ``torch.tensor``
+            Tensor of reciprocal-space points at which to evaluate the form factor.
+            
+        R : float
+            Radius of sphere.
+                
+        Returns
+        -------
+        f : ``torch.tensor`` of shape ``q.shape``
+            Form factor evaluated at each point in ``q``.
+                
+        """
+        f = self._f_sphere(q, R)
         f /= f.max()
         return f
         
     
+    def f_coreshell(self, q, Rc, Rs, pc, ps, pa):
+        r"""Normalized form factor of a core-shell particle.
+            
+        Parameters
+        ----------
+        q : ``torch.tensor``
+            Tensor of reciprocal-space points at which to evaluate the form factor.
+            
+        Rc : float
+            Radius of core.
+            
+        Rs : float
+            Radius of shell.
+            
+        pc : float
+            Scattering length density of core.
+            
+        ps : float
+            Scattering length density of shell.
+            
+        pa : float
+            Scattering length density of solvent.
+                
+        Returns
+        -------
+        f : ``torch.tensor`` of shape ``q.shape``
+            Form factor evaluated at each point in ``q``.
+                
+        """
+        f = (pc - ps)*self._f_sphere(q, Rc) + (ps - pa)*self._f_sphere(q, Rs)
+        f /= f.max()
+        return f
+
+
     def I_xnm(self, ys):
         r"""Non-magnetic scattering channel intensity.
             

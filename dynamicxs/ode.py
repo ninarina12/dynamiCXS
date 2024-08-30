@@ -13,7 +13,7 @@ from torchdiffeq import odeint, odeint_adjoint
 
 from skimage.data import binary_blobs
 
-from display import cm, props, format_axis
+from display import cm, props, format_axis, truncate_colormap
 from utils import laplacian_of_gaussian
 
 
@@ -51,7 +51,7 @@ class ODE(nn.Module):
         self.default_type = default_type
         
         
-    def _color(self, y, ntype=None, vmin=None, vmax=None):
+    def _color(self, y, ntype=None, vmin=None, vmax=None, alpha=0):
         if ntype == 'sym':
             vmax = vmax if vmax else np.abs(y).max()
             vmin = vmin if vmin else -vmax
@@ -76,6 +76,17 @@ class ODE(nn.Module):
             vmax = vmax if vmax else 1e5
             norm = mpl.colors.SymLogNorm(linthresh=vmin, vmin=-vmax, vmax=vmax)
             cmap = cm.berlin_r
+        elif ntype == 'mono':
+            norm = plt.Normalize(vmin=vmin if isinstance(vmin, (float, int)) else y.min(),
+                                 vmax=vmax if isinstance(vmax, (float, int)) else y.max())
+            cmap = truncate_colormap(cm.vik_r, minval=0.52, maxval=1., n=cm.vik_r.N)
+        elif ntype == 'grad':
+            norm = plt.Normalize(vmin=vmin if isinstance(vmin, (float, int)) else y.min(),
+                                 vmax=vmax if isinstance(vmax, (float, int)) else y.max())
+            cmap = truncate_colormap(cm.vik_r, minval=0.52, maxval=1., n=cm.vik_r.N).copy()
+            cmap(0)
+            cmap._lut[:cmap.N,3] = np.linspace(0, 1, cmap.N)**4
+            cmap._lut[cmap.N] = 0.
         else:
             norm = plt.Normalize(vmin=vmin if isinstance(vmin, (float, int)) else y.min(),
                                  vmax=vmax if isinstance(vmax, (float, int)) else y.max())
@@ -282,7 +293,8 @@ class ODE(nn.Module):
             sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
 
             colors = cmap(norm(y))
-            colors[...,-1] = alpha
+            if alpha:
+                colors[...,-1] = alpha
 
             try: len(extent)
             except:
@@ -1059,6 +1071,17 @@ class ODEGraph(MessagePassing):
             vmax = vmax if vmax else 1e5
             norm = mpl.colors.SymLogNorm(linthresh=vmin, vmin=-vmax, vmax=vmax)
             cmap = cm.berlin_r
+        elif ntype == 'mono':
+            norm = plt.Normalize(vmin=vmin if isinstance(vmin, (float, int)) else y.min(),
+                                 vmax=vmax if isinstance(vmax, (float, int)) else y.max())
+            cmap = truncate_colormap(cm.vik_r, minval=0.52, maxval=1., n=cm.vik_r.N)
+        elif ntype == 'grad':
+            norm = plt.Normalize(vmin=vmin if isinstance(vmin, (float, int)) else y.min(),
+                                 vmax=vmax if isinstance(vmax, (float, int)) else y.max())
+            cmap = truncate_colormap(cm.vik_r, minval=0.52, maxval=1., n=cm.vik_r.N).copy()
+            cmap(0)
+            cmap._lut[:cmap.N,3] = np.linspace(0, 1, cmap.N)**4
+            cmap._lut[cmap.N] = 0.
         else:
             norm = plt.Normalize(vmin=vmin if isinstance(vmin, (float, int)) else y.min(),
                                  vmax=vmax if isinstance(vmax, (float, int)) else y.max())
@@ -1273,7 +1296,8 @@ class ODEGraph(MessagePassing):
             c = np.mod(y[...,-1], 2*np.pi) - np.pi
             cmap, norm = self._color(c, ntype)
             colors = cmap(norm(c))
-            colors[...,-1] = alpha
+            if alpha:
+                colors[...,-1] = alpha
             
             try: ax.set_zticks([])
             except:
@@ -1293,7 +1317,8 @@ class ODEGraph(MessagePassing):
             sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
 
             colors = cmap(norm(y))
-            colors[...,-1] = alpha
+            if alpha:
+                colors[...,-1] = alpha
 
             try: len(extent)
             except:
@@ -1458,7 +1483,7 @@ class Swarm(ODEGraph):
         for k, v in default_args.items():
             setattr(self, k, args[k] if k in args else v)
         
-        self.z = (2./self.L)**2
+        self.z = (2./self.L)**self.D
         self.gx = self._init_graph(self.rc, self.Nc)
         self.basis = lambda x, a: (x, torch.sin(a), torch.cos(a))
         
