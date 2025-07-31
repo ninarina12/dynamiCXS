@@ -602,7 +602,7 @@ class Kuramoto3D(ODE):
         """
         torch.manual_seed(seed)
         y0 = 2*np.pi*torch.rand((M, 1, self.N, self.N, self.N), dtype=self.default_type)
-        self.y0 = nn.Parameter(dy.flatten(start_dim=-3), requires_grad=False)
+        self.y0 = nn.Parameter(y0.flatten(start_dim=-3), requires_grad=False)
     
     
     def forward(self, t, y):
